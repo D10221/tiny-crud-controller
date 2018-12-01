@@ -1,12 +1,11 @@
-import { join } from "path";
-import { CrudController, ensureBody, ensureID, Repo, validate } from "../src"; 
-import { RequestHandler } from "express";
 import { json } from "body-parser";
+import express, { RequestHandler } from "express";
+import { join } from "path";
 import uuid from "uuid";
-import express from "express";
+import { AsyncMap, CrudController, ensureBody, ensureID, validate } from "../src";
 
 /** */
-interface Things {
+interface Thing {
     /** generic */
     id: string;
     name: string;
@@ -19,31 +18,22 @@ interface Things {
     /** generic: owner/user id */
     userid: string;
 }
+class AMap implements AsyncMap<{}>{    
+    map = new Map();
+    get = (key: string)=>  Promise.resolve(this.map.get(key));
+    set = (key: string)=>  Promise.resolve(this.map.get(key));
+    clear = () => Promise.resolve(this.map.clear());
+    delete = (key: string) =>  Promise.resolve(this.map.delete(key));
+    forEach = (callback: (value: {}, key: string, map: AsyncMap<{}>) => any) => this.map.forEach((key, value)=> callback(key, value, this));
+    has = (key: string) => Promise.resolve(this.map.has(key));    
+}
 /**
  * 
  */
 describe(require(join(__dirname, "../package.json")).name, ()=> {
-    it("works", ()=> {
-        // TODO:         
-        /** Implement Repo  */
-        const repo = {
-            all(){
-                return Promise.resolve([]);
-            },
-            byId(id: string){
-                return Promise.resolve({ id });
-            },
-            add(x: {}){
-                return Promise.resolve(x);
-            },
-            remove(id: string){
-                return Promise.resolve();
-            },
-            update(x: {}){
-                return  Promise.resolve(x);
-            }
-        };
-         const crud = CrudController(repo);
+    it("May Work", ()=> {               
+        
+         const crud = CrudController(new AMap());
          const endpoint = "things";
          const route = `/api/${endpoint}/:id?`;
          // ... 
@@ -54,7 +44,7 @@ describe(require(join(__dirname, "../package.json")).name, ()=> {
          app.put(route, [
               /*extra-middleware*/
              json(),
-             ensureBody<Things, keyof Things>(["displayName", "name", "notes"]),
+             ensureBody<Thing, keyof Thing>(["displayName", "name", "notes"]),
              ensureID(uuid),
              validate( req => {                 
                  const validation:string[] = [];

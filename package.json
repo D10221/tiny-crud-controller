@@ -1,6 +1,6 @@
 {
   "name": "@australis/tiny-crud-controller",
-  "version": "0.1.0-1",
+  "version": "0.1.0-2",
   "description": "simple express crud controller",
   "private": false,
   "main": "lib/index.js",

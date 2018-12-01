@@ -1,25 +1,31 @@
-import { RequestHandler, Request, Response } from "express";
-import { Repo } from "./types";
+import { RequestHandler } from "express";
+
 import fromBody from "./from-body";
-/** 
+import all from "./all";
+import fromParams from "./from-params";
+import { Payload, AsyncMap } from "./types";
+/**
  * TODO: paged
  */
-export default function CrudController<TTable extends Repo>(table: TTable) {
+export default function CrudController<TStore extends AsyncMap<{}>>(
+  store: TStore,
+) {
   //
   const noClean = (x: any) => x;
   /**
    * READ/GET/LIST
    */
-  const get: (clean?: (x: any) => any) => RequestHandler = (
-    clean = noClean
+  const get: (payload?: Payload, clean?: (x: any) => any) => RequestHandler = (
+    payload = fromParams,
+    clean = noClean,
   ) => async (req, res, next) => {
     try {
-      const { id } = req.params;
-      let data: any = null;
-      if (id) {
-        data = clean((await table.byId(id)) || {});
+      const [key] = payload(req, res);
+      let data;
+      if (key) {
+        data = clean((await store.get(key)) || {});
       } else {
-        data = ((await table.all()) || []).map(clean);
+        data = ((await all(store)) || []).map(clean);
       }
       return res.json(data);
     } catch (error) {
@@ -30,12 +36,12 @@ export default function CrudController<TTable extends Repo>(table: TTable) {
    * DELETE/REMOVE
    */
   const dlete: (clean?: (x: any) => any) => RequestHandler = (
-    clean = noClean
+    clean = noClean,
   ) => async (req, res, next) => {
     try {
       clean = clean || noClean;
       const { id } = req.body;
-      const data = await table.remove(id);
+      const data = await store.set(id, null);
       return res.json(clean(data));
     } catch (error) {
       return next(error);
@@ -45,18 +51,20 @@ export default function CrudController<TTable extends Repo>(table: TTable) {
    * Create, Add, Insert , NEW , PUT
    */
   const put: (
-    payload?: (req: Request, res: Response) => any,
-    clean?: (x: any) => any
+    payload?: Payload,
+    clean?: (x: any) => any,
   ) => RequestHandler = (payload = fromBody, clean = noClean) => async (
     req,
     res,
-    next
+    next,
   ) => {
     try {
       payload = payload || fromBody;
       clean = clean || noClean;
-      const data = await table.add(payload(req, res));
-      return res.json(clean(data));
+      const [key, data] = payload(req, res);
+      await store.set(key, data);
+      const ret = await store.get(key);
+      return res.json(clean(ret));
     } catch (error) {
       return next(error);
     }
@@ -65,17 +73,17 @@ export default function CrudController<TTable extends Repo>(table: TTable) {
    * SET, Modify, update, POST
    */
   const post: (
-    payload?: (req: Request, res: Response) => any,
-    clean?: (x: any) => any
+    payload?: Payload,
+    clean?: (x: any) => any,
   ) => RequestHandler = (payload = fromBody, clean = noClean) => async (
     req,
     res,
-    next
+    next,
   ) => {
     try {
       payload = payload || fromBody;
       clean = clean || noClean;
-      const data = await table.update(payload(req, res));
+      const data = await store.set(...payload(req, res));
       return res.json(clean(data));
     } catch (error) {
       return next(error);
@@ -85,6 +93,6 @@ export default function CrudController<TTable extends Repo>(table: TTable) {
     put,
     get,
     dlete,
-    post
+    post,
   };
 }
