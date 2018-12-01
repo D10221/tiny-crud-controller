@@ -5,7 +5,8 @@
   "license": "MIT",
   "private": true,
   "scripts": {
-    "start": "node -r ts-node/register --inspect src/index.ts"
+    "start": "node -r ts-node/register --inspect src/index.ts",
+    "test": "jest --ci --env=node"
   },
   "dependencies": {
     "express": "^4.16.3",

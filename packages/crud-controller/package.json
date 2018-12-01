@@ -6,31 +6,12 @@
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "scripts": {
-    "test": "jest --env=node --ci",
-    "build": "rimraf lib && tsc -p ."    
+    "test": "jest --ci --env=node",
+    "build": "rimraf lib && tsc -p ."
   },
   "keywords": [],
   "author": "daniel@australis-technica.com",
   "license": "MIT",
-  "jest": {
-    "globals": {
-      "ts-jest": {
-        "tsConfigFile": "tsconfig.test.json"
-      }
-    },
-    "transform": {
-      "^.+\\.tsx?$": "ts-jest"
-    },
-    "testRegex": "(/test/.*|(\\.|/)(test|spec))\\.(jsx?|tsx?)$",
-    "moduleFileExtensions": [
-      "ts",
-      "tsx",
-      "js",
-      "jsx",
-      "json",
-      "node"
-    ]
-  },
   "dependencies": {
     "express": "^4.16.3",
     "uuid": "^3.3.2"

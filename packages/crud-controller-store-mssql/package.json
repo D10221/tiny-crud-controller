@@ -11,8 +11,7 @@
     "build": "rimraf lib && tsc -p ."
   },
   "dependencies": {
-    "@australis/tiny-sql-extra": "^1.0.0-21",
-    "@australis/tiny-sql-simple-repo": "^1.0.0-21"
+    "@australis/tiny-sql-simple-repo": "^1.0.0-22"
   },
   "devDependencies": {
     "@types/jest": "^23.3.9",
@@ -26,24 +25,5 @@
   "files": [
     "lib/**/*",
     "readme.md"
-  ],
-  "jest": {
-    "globals": {
-      "ts-jest": {
-        "tsConfigFile": "tsconfig.test.json"
-      }
-    },
-    "transform": {
-      "^.+\\.tsx?$": "ts-jest"
-    },
-    "testRegex": "(/test/.*|(\\.|/)(test|spec))\\.(jsx?|tsx?)$",
-    "moduleFileExtensions": [
-      "ts",
-      "tsx",
-      "js",
-      "jsx",
-      "json",
-      "node"
-    ]
-  }
+  ]
 }

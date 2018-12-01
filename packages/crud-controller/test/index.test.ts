@@ -80,7 +80,7 @@ describe(require(join(__dirname, "../package.json")).name, () => {
         // request
         params: { id: "abc" },
       }),
-    ).toBe("{}");
+    ).toBe('{"id":"abc"}');
   });
 
   it("updates", async () => {
