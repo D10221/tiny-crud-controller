@@ -1,17 +1,24 @@
 import { RequestHandler, Router } from "express";
 import uuid from "uuid";
-import CrudController, {
-  ensureBody,
-  ensureID,
-  validate,
-} from "@australis/tiny-crud-controller";
-import AsyncMap from "@australis/tiny-crud-controller-store-asyncmap";
+import CrudController, {  ensureBody,  ensureID,  validate,} from "@australis/tiny-crud-controller";
+import Store from "@australis/tiny-crud-controller-store-mssql";
 import { Thing } from "./types";
 
-const crud = CrudController(new AsyncMap());
+const script = `/* Things */
+if not exists(select name from sys.tables where name = 'things')
+create table things (
+    id varchar(1024) NOT NULL UNIQUE default NEWID(),
+    name varchar(max) NOT NULL,
+    enabled bit not null default 0,
+    createdAt DATETIME NOT NULL default GETDATE(),
+    updatedAt DATETIME NOT NULL default GETDATE()
+);`;
+const store = Store("things", script);
+const crud = CrudController(store);
 const route = `/:id?`;
 
-export default () => {
+export default async () => {
+  await store.init();
   const router = Router();
   /** READ/GET */
   router.get(route, [/*extra-middleware*/ crud.get()]);
@@ -27,16 +34,7 @@ export default () => {
         validation.push("missing id");
       }
       return Promise.resolve(validation);
-    }),
-    ((req, _res, next) => {
-      // include user
-      try {
-        req.body.userid = (req as any).user && (req as any).user.id;
-        return next();
-      } catch (error) {
-        return next(error);
-      }
-    }) as RequestHandler,
+    }),   
     crud.put(),
   ]);
 

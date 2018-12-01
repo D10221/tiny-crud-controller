@@ -2,7 +2,7 @@ import { json } from "body-parser";
 import express, { RequestHandler } from "express";
 import { join } from "path";
 import uuid from "uuid";
-import { CrudController, ensureBody, ensureID, validate } from "../src";
+import CrudController, { ensureBody, ensureID, validate } from "../src";
 import AsyncMap from "@australis/tiny-crud-controller-store-asyncmap";
 /**
  *
@@ -144,9 +144,8 @@ describe(require(join(__dirname, "../package.json")).name, () => {
       // request
       body: { id: "abc" },
     }).catch(e => e);
-    expect(x).toBeInstanceOf(Error)
+    expect(x).toBeInstanceOf(Error);
   });
-
 
   const testJsonHandler = (handler: RequestHandler) => (req: any) =>
     new Promise<any>((resolve, reject) => {

@@ -1,21 +1,7 @@
 import { connected } from "@australis/tiny-sql-simple-repo";
 
-export default (envKey: string) => {
-  const repo = connected(
-    "things",
-    `/* Things */
-    if not exists(select name from sys.tables where name = 'things'))
-    create table things (
-        id varchar(1024) NOT NULL UNIQUE default NEWID(),
-        displayName varchar(max) NOT NULL,
-        enabled bit not null default 0,
-        nullable bit,
-        createdAt DATETIME NOT NULL default GETDATE(),
-        updatedAt DATETIME NOT NULL default GETDATE()
-    );
-`,
-    envKey,
-  );
+export default (name: string, script: string, envKey = "DB") => {
+  const repo = connected(name, script, envKey);
   return {
     find(id: string) {
       if (id) return repo.byId(id);
@@ -25,16 +11,17 @@ export default (envKey: string) => {
       return repo.remove(id);
     },
     add(id: string, data: any) {
-        return repo.add({
-            id,
-            ...data
-        });
+      return repo.add({
+        id,
+        ...data,
+      });
     },
     update(id: string, data: any) {
-        return repo.update({
-            id,
-            ...data
-        })
+      return repo.update({
+        id,
+        ...data,
+      });
     },
-  }
+    init: repo.init
+  };
 };
