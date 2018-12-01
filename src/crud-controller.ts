@@ -1,33 +1,28 @@
 import { RequestHandler } from "express";
 
 import fromBody from "./from-body";
-import all from "./all";
 import fromParams from "./from-params";
-import { Payload, AsyncMap } from "./types";
+import { Store } from "./types";
+import fromAny from "./from-any";
 /**
  * TODO: paged
  */
-export default function CrudController<TStore extends AsyncMap<{}>>(
-  store: TStore,
-) {
+export default function CrudController<TStore extends Store>(store: TStore) {
   //
   const noClean = (x: any) => x;
   /**
    * READ/GET/LIST
    */
-  const get: (payload?: Payload, clean?: (x: any) => any) => RequestHandler = (
-    payload = fromParams,
-    clean = noClean,
-  ) => async (req, res, next) => {
+  const get = (payload = fromParams, clean = noClean): RequestHandler => async (
+    req,
+    res,
+    next,
+  ) => {
+    payload = payload || fromAny;
+    clean = clean || noClean;
     try {
-      const [key] = payload(req, res);
-      let data;
-      if (key) {
-        data = clean((await store.get(key)) || {});
-      } else {
-        data = ((await all(store)) || []).map(clean);
-      }
-      return res.json(data);
+      const [id] = payload(req, res);
+      return res.json(clean(await store.find(id)) || null);
     } catch (error) {
       return next(error);
     }
@@ -35,14 +30,17 @@ export default function CrudController<TStore extends AsyncMap<{}>>(
   /**
    * DELETE/REMOVE
    */
-  const dlete: (clean?: (x: any) => any) => RequestHandler = (
-    clean = noClean,
-  ) => async (req, res, next) => {
+  const dlete = (payload = fromAny, clean = noClean): RequestHandler => async (
+    req,
+    res,
+    next,
+  ) => {
+    payload = payload || fromAny;
+    clean = clean || noClean;
     try {
-      clean = clean || noClean;
-      const { id } = req.body;
-      const data = await store.set(id, null);
-      return res.json(clean(data));
+      const [id] = payload(req, res);
+      const ret = await store.remove(id);
+      return res.json(clean(ret));
     } catch (error) {
       return next(error);
     }
@@ -50,10 +48,7 @@ export default function CrudController<TStore extends AsyncMap<{}>>(
   /**
    * Create, Add, Insert , NEW , PUT
    */
-  const put: (
-    payload?: Payload,
-    clean?: (x: any) => any,
-  ) => RequestHandler = (payload = fromBody, clean = noClean) => async (
+  const put = (payload = fromBody, clean = noClean): RequestHandler => async (
     req,
     res,
     next,
@@ -61,10 +56,10 @@ export default function CrudController<TStore extends AsyncMap<{}>>(
     try {
       payload = payload || fromBody;
       clean = clean || noClean;
-      const [key, data] = payload(req, res);
-      await store.set(key, data);
-      const ret = await store.get(key);
-      return res.json(clean(ret));
+      const [id, data] = payload(req, res);
+      await store.add(id, data);
+      const ret = await store.find(id);
+      return res.json(clean({ id, ...ret }));
     } catch (error) {
       return next(error);
     }
@@ -72,10 +67,7 @@ export default function CrudController<TStore extends AsyncMap<{}>>(
   /**
    * SET, Modify, update, POST
    */
-  const post: (
-    payload?: Payload,
-    clean?: (x: any) => any,
-  ) => RequestHandler = (payload = fromBody, clean = noClean) => async (
+  const post = (payload = fromBody, clean = noClean): RequestHandler => async (
     req,
     res,
     next,
@@ -83,8 +75,15 @@ export default function CrudController<TStore extends AsyncMap<{}>>(
     try {
       payload = payload || fromBody;
       clean = clean || noClean;
-      const data = await store.set(...payload(req, res));
-      return res.json(clean(data));
+      const [id, data] = payload(req, res);
+      await store.update(id, data);
+      const ret = await store.find(id);
+      return res.json(
+        clean({
+          id,
+          ...ret,
+        }),
+      );
     } catch (error) {
       return next(error);
     }
