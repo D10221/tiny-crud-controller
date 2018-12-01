@@ -5,8 +5,9 @@
   "main": "index.js",
   "license": "MIT",
   "workspaces": [
+    "packages/crud-controller-store-asyncmap",
+    "packages/crud-controller-store-mssql",
     "packages/crud-controller",
-    "packages/crud-controller-demo",
-    "packages/crud-controller-store-asyncmap"
+    "packages/crud-controller-demo"
   ]
 }

@@ -1,26 +1,31 @@
 {
-  "name": "@australis/tiny-crud-controller-demo",
+  "name": "@australis/tiny-crud-controller-store-mssql",
   "version": "0.1.0-2",
-  "main": "index.js",
+  "description": "demo implementaion",
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
   "license": "MIT",
   "private": true,
   "scripts": {
-    "start": "node -r ts-node/register --inspect src/index.ts"
+    "test": "jest --env=node --ci",
+    "build": "rimraf lib && tsc -p ."
   },
   "dependencies": {
-    "express": "^4.16.3",
-    "uuid": "^3.3.2"
+    "@australis/tiny-sql-simple-repo": "^1.0.0-21"
   },
   "devDependencies": {
-    "@types/express": "^4.11.1",
     "@types/jest": "^23.3.9",
-    "@types/uuid": "^3.4.3",
+    "@types/tedious": "^2.6.1",
     "jest": "23.6.0",
     "rimraf": "^2.6.2",
     "ts-jest": "23.10.4",
     "ts-node": "^7.0.1",
     "typescript": "3.1.6"
   },
+  "files": [
+    "lib/**/*",
+    "readme.md"
+  ],
   "jest": {
     "globals": {
       "ts-jest": {

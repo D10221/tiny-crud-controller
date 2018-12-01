@@ -1,5 +1,4 @@
 import { RequestHandler } from "express";
-
 import fromBody from "./from-body";
 import fromParams from "./from-params";
 import { Store } from "./types";
@@ -22,7 +21,12 @@ export default function CrudController<TStore extends Store>(store: TStore) {
     clean = clean || noClean;
     try {
       const [id] = payload(req, res);
-      return res.json(clean(await store.find(id)) || null);
+      let ret: any = (await store.find(id)) || null;
+      if (!Array.isArray(ret) && typeof ret === "object") {
+        ret = ret && { id, ...ret };
+        ret = ret || null;
+      }
+      return res.json(clean(ret));
     } catch (error) {
       return next(error);
     }

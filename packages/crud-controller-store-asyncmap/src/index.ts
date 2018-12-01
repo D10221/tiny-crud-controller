@@ -1,6 +1,5 @@
-import { Store } from "@australis/tiny-crud-controller";
 
-export default class MapStore<T extends {} = {}> implements Store {
+export default class MapStore<T extends {} = {}> {
   map = new Map<string, T>();
   find = (key: string) => {
     if (key) return Promise.resolve(this.map.get(key));
@@ -24,6 +23,6 @@ export default class MapStore<T extends {} = {}> implements Store {
   remove = (key: string) => {
     if (!this.map.has(key))
       return Promise.reject(new Error("Not Found, Key: " + key));
-    return Promise.resolve(this.map.set(key, undefined));
+    return Promise.resolve(this.map.delete(key));
   };
 }

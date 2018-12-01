@@ -5,18 +5,13 @@ import { RequestHandler } from "express";
 export default function ensureId(newid?: () => any): RequestHandler {
     return (req, _res, next) => {
         try {
-            const { params, body } = req;
-            if (!req.body) {
-                return next(Object.assign(new Error("Bad Request, body required"), { ode: 400 }));
-            }
-            let id = (params || {}).id
-            id = id || (body || {}).id;
-            id = id || (newid && newid()) || undefined;
+            const { params, body, query } = req;     
+            let id = (query && query.id) || (params && params.id) || (body && body.id) || newid && newid();      
             if (!id) {
                 return next(new Error("Id required!"));
             }
             /** */
-            Object.assign(req.body, { id, });
+            Object.assign(req.body||{}, { id, });
             return next();
         } catch (error) {
             return next(error);

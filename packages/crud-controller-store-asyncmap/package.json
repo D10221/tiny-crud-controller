@@ -1,6 +1,7 @@
 {
   "name": "@australis/tiny-crud-controller-store-asyncmap",
-  "version": "1.0.0",
+  "version": "0.1.0-2",
+  "description": "demo implementaion",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
   "license": "MIT",
@@ -23,5 +24,24 @@
   "files": [
     "lib/**/*",
     "readme.md"
-  ]
+  ],
+  "jest": {
+    "globals": {
+      "ts-jest": {
+        "tsConfigFile": "tsconfig.test.json"
+      }
+    },
+    "transform": {
+      "^.+\\.tsx?$": "ts-jest"
+    },
+    "testRegex": "(/test/.*|(\\.|/)(test|spec))\\.(jsx?|tsx?)$",
+    "moduleFileExtensions": [
+      "ts",
+      "tsx",
+      "js",
+      "jsx",
+      "json",
+      "node"
+    ]
+  }
 }
