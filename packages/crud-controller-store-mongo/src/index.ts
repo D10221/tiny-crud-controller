@@ -6,7 +6,7 @@ export default <T extends Document, QueryHelpers = {}>(
   return {
     add(id: string, data: {}) {
       return model.create({
-        id,
+        _id: id,
         ...data,
       });
     },

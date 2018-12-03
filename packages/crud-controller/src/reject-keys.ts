@@ -16,7 +16,7 @@ export default function RejectKeys(
   return function rejectKeys(req, _res, next) {
     for (const key of keys) {
       if (Object.keys(get(req)).indexOf(key) !== -1) {
-        return next(new Error(`Key: ${key}: Not Allowed, readonly`));
+        return next(new Error(`Key: ${key}: Not Allowed`));
       }
     }
     next();

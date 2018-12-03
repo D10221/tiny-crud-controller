@@ -2,7 +2,7 @@ import { RequestHandler } from "express";
 /**
    * ensure
    */
-export default function ensureBody<Shape, TK extends keyof Shape & string>(expectedKeys?: TK[]): RequestHandler {
+export default function ensureBody<Shape>(expectedKeys?:  (keyof Shape & string)[]): RequestHandler {
     return (req, _res, next) => {
         try {
             if (!req.body) {

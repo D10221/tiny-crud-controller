@@ -13,7 +13,7 @@ async function run() {
       process.env.MONGO_DB,
       {},
     );
-    app.use("/api/things", [json(), mapOfThings()]);
+    app.use("/api/map/things", [json(), mapOfThings()]);
     app.use("/api/sql/things", [json(), await sqlThings()]);
     app.use("/api/mongo/things", [json(), mongoThings(db)]);
     app.listen(5000, (err: any) => {

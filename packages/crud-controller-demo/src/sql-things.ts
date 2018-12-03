@@ -1,6 +1,10 @@
 import { RequestHandler, Router } from "express";
 import uuid from "uuid";
-import CrudController, {  ensureBody,  ensureID,  validate,} from "@australis/tiny-crud-controller";
+import CrudController, {
+  ensureBody,
+  ensureID,
+  validate,
+} from "@australis/tiny-crud-controller";
 import Store from "@australis/tiny-crud-controller-store-mssql";
 import { Thing } from "./types";
 
@@ -21,12 +25,12 @@ export default async () => {
   await store.init();
   const router = Router();
   /** READ/GET */
-  router.get(route, [/*extra-middleware*/ crud.get()]);
+  router.get(route, [/*extra-middleware*/ crud.find()((_, data) => data)]);
 
   /** ADD/PUT*/
   router.put(route, [
     /*extra-middleware*/
-    ensureBody<Thing, keyof Thing>(["name"]),
+    ensureBody<Thing>(["name"]),
     ensureID(uuid),
     validate(req => {
       const validation: string[] = [];
@@ -34,22 +38,22 @@ export default async () => {
         validation.push("missing id");
       }
       return Promise.resolve(validation);
-    }),   
-    crud.put(),
+    }),
+    crud.add()((id, data) => ({ id, ...data })),
   ]);
 
   /** UPDATE/POST */
   router.post(route, [
     ensureBody(),
     ensureID(), // reject missing id
-    crud.post(),
+    crud.update()((_id, data) => data),
   ]);
 
   /** DELETE/REMOVE */
   router.delete(route, [
     /*extra-middleware*/
     ensureID(), // reject no id
-    crud.dlete(),
+    crud.remove()(() => "ok"),
   ]);
 
   return router;

@@ -1,5 +1,4 @@
-import { RequestHandler, Router } from "express";
-import uuid from "uuid";
+import { Router } from "express";
 import CrudController, {
   ensureBody,
   ensureID,
@@ -14,13 +13,17 @@ const route = `/:id?`;
 export default (db: Mongoose) => {
   const store = Store(
     db.model(
-      "things",
+      "thing",
       new db.Schema(
         {
-          id: db.Schema.Types.ObjectId,
-          name: db.Schema.Types.String,
+          _id: db.Schema.Types.ObjectId,
+          name: {
+            type: db.Schema.Types.String,
+            unique: true,
+          },
         },
         {
+          collection: "things",
           timestamps: true,
         },
       ),
@@ -30,13 +33,21 @@ export default (db: Mongoose) => {
 
   const router = Router();
   /** READ/GET */
-  router.get(route, [/*extra-middleware*/ crud.get()]);
+  router.get(route, crud.find()((...args) => args[1]));
 
   /** ADD/PUT*/
   router.put(route, [
     /*extra-middleware*/
-    ensureBody<Thing, keyof Thing>(["name"]),
-    ensureID(uuid),
+    ensureBody<Thing>(["name"]),
+    //
+    ensureID(
+      () => {
+        return new db.Types.ObjectId().toHexString();
+      },
+      id => {
+        return id && /^[a-f0-9]{24}$/.test(id);
+      },
+    ),
     validate(req => {
       const validation: string[] = [];
       if (!req.body.id) {
@@ -44,21 +55,21 @@ export default (db: Mongoose) => {
       }
       return Promise.resolve(validation);
     }),
-    crud.put(),
+    crud.add()((id, data) => ({ id, ...data })),
   ]);
 
   /** UPDATE/POST */
   router.post(route, [
     ensureBody(),
     ensureID(), // reject missing id
-    crud.post(),
+    crud.update()((id, data) => data),
   ]);
 
   /** DELETE/REMOVE */
   router.delete(route, [
     /*extra-middleware*/
     ensureID(), // reject no id
-    crud.dlete(),
+    crud.remove()(() => "ok"),
   ]);
 
   return router;
