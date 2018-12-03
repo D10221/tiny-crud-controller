@@ -8,6 +8,7 @@
     "packages/crud-controller-store-asyncmap",
     "packages/crud-controller-store-mssql",
     "packages/crud-controller-store-mongo",
+    "packages/crud-controller-store-level",
     "packages/crud-controller",
     "packages/crud-controller-demo"
   ]

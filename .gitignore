@@ -15,3 +15,4 @@
 *.tar.gz
 *.log
 *.local
+*store.json
