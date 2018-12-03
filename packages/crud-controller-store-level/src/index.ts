@@ -1,55 +1,126 @@
 
 import levelup from "levelup";
 import jsonDown from "jsondown";
-import { join } from "path";
+import { join, isAbsolute } from "path";
 
-const deserialize = (value: Buffer | string) => {
-  if (value === null || value === undefined) {
-    return null;
-  }
-  if (value instanceof Buffer) {
-    return JSON.parse(value.toString("utf-8"));
-  }
-  if (typeof value === "string") {
-    return JSON.parse(value);
-  }
-  throw new Error("Not Implemented");
+export const newLevel = (location: string) => levelup(jsonDown(isAbsolute(location) ? location : join(process.cwd(), location)));
+
+const _serializer = {
+  serialize: JSON.stringify,
+  deserialize(value: Buffer | string) {
+    if (value === null || value === undefined) {
+      return null;
+    }
+    if (value instanceof Buffer) {
+      return JSON.parse(value.toString("utf-8"));
+    }
+    if (typeof value === "string") {
+      return JSON.parse(value);
+    }
+    throw new Error("Not Implemented");
+  },
 }
-const serialize = (x: any) => JSON.stringify(x);
+/** */
+const encoder = (name: string) => {
+  const regex = new RegExp(`^${name}\/.*`, "i");
+  return {
+    isMatch(key: Buffer | string) {
+      if (typeof key === "string")
+        return regex.test(key)
+      return key.toString();
+    }
+    ,
+    decode(key: string | Buffer) {
+      if (typeof key === "string") return key.split(`${name}/`)[1];
+      return key.toString().split(`${name}/`)[1];
+    }
+    ,
+    encode(id: string) {
+      return `${name}/${id}`
+    }
+  }
+}
+
+export type Serializer = {
+  serialize: (a: any) => string,
+  deserialize: (value: string | Buffer) => any
+};
+
+export type Encoder = {
+  encode(s: string): string,
+  decode(s: string): string,
+  isMatch: (s: string | Buffer) => boolean;
+}
+export interface Options {
+  serializer?: Serializer,
+  encoder?: Encoder,
+  map?: (key: string, value: any) => any
+}
+/** */
+const catchNotFound = (returns: any = null) => (error: Error) => {
+  return error && error.name === "NotFoundError" ? returns : Promise.reject(error)
+}
 /**
  * './mydata.json'
  */
-export default (name: string, db: any = null) => {
+export default (name: string) => {
 
-  db = levelup(jsonDown(join(process.cwd(), "store.json")));
+  return (db: any = null, options?: Options) => {
 
-  const regex = new RegExp(`^${name}\/.*`, "i");
+    db = db || newLevel("store.json");
 
-  const isMatch = (key: Buffer | string) => {
-    if (typeof key === "string")
-      return regex.test(key)
-    return key.toString();
-  }
+    const { serialize, deserialize } = options && options.serializer || _serializer;
+    const { encode, decode, isMatch } = (options && options.encoder) || encoder(name);
+    const map = options && options.map || ((key, value) => ({ key, ...(value || {}) }));
 
-  const split = (key: string | Buffer) => {
-    if (typeof key === "string") return key.split(`${name}/`)[1];
-    return key.toString().split(`${name}/`)[1];
-  }
-
-  const find = (id?: string) => {
-    if (id) {
-      return db.get(`${name}/${id}`)
-    } else {
-      return new Promise((resolve, reject) => {
+    const find = async (id?: string) => {
+      if (id) {
+        return db.get(encode(id)).then((value: any) => map(id, deserialize(value)));
+      } else {
+        return new Promise((resolve, reject) => {
+          try {
+            const stream = (db.createReadStream() as NodeJS.ReadableStream);
+            let result: any[] = [];
+            stream.on("data", ({ key, value }) => {
+              if (isMatch(key)) {
+                result.push(map(decode(key), deserialize(value)));
+              }
+            });
+            stream.on("error", error => {
+              reject(error);
+            })
+            // stream.on("close", () => {});
+            stream.on("end", () => {
+              resolve(result);
+            })
+          } catch (error) {
+            return reject(error);
+          }
+        });
+      }
+    };
+    /** */
+    return {
+      add: async (id: string, data: {}) => {
+        if (await find(id).catch(catchNotFound(false))) return Promise.reject(new Error(`Duplicate key: ${id}`));
+        return db.put(encode(id), serialize(data)) as Promise<any>
+      },
+      find,
+      remove(id?: string) {
+        return db.del(encode(id));
+      },
+      update: async (id: string, data: {}) => {
+        if (!await find(id)) return Promise.reject(new Error(`Not Found key: ${id}`));
+        return db.put(encode(id), data);
+      },
+      clear: () => new Promise((resolve, reject) => {
         try {
           const stream = (db.createReadStream() as NodeJS.ReadableStream);
-          let result: any[] = [];
-          stream.on("data", ({ key, value }) => {
+          let result = 0;
+          stream.on("data", async ({ key }) => {
             if (isMatch(key)) {
-              result.push({
-                key: split(key),
-                ...deserialize(value)
-              });
+              result = result + 1
+              await db.del(key);
             }
           });
           stream.on("error", error => {
@@ -62,22 +133,7 @@ export default (name: string, db: any = null) => {
         } catch (error) {
           return reject(error);
         }
-      });
-    }
-  };
-
-  return {
-    add: async (id: string, data: {}) => {
-      if (await find(id)) return Promise.reject(new Error(`Duplicate key: ${id}`));
-      return db.put(`${name}/${id}`, serialize(data)) as Promise<any>
-    },
-    find,
-    remove(id?: string) {
-      return db.del(`${name}/${id}`);
-    },
-    update: async (id: string, data: {}) => {
-      if (!await find(id)) return Promise.reject(new Error(`Not Found key: ${id}`));
-      return db.put(`${name}/${id}`, data);
-    },
-  };
+      })
+    };
+  }
 };
