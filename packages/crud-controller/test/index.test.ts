@@ -1,86 +1,36 @@
-import { json } from "body-parser";
-import express, { RequestHandler } from "express";
-import { join } from "path";
-import uuid from "uuid";
-import CrudController, { ensureBody, ensureID, validate } from "../src";
 import AsyncMap from "@australis/tiny-crud-controller-store-asyncmap";
+import { RequestHandler } from "express";
+import { join } from "path";
+import CrudController from "../src";
 /**
  *
  */
 describe(require(join(__dirname, "../package.json")).name, () => {
-  it("May Work", () => {
-    const crud = CrudController(new AsyncMap());
-    const endpoint = "things";
-    const route = `/api/${endpoint}/:id?`;
-    // ...
-    const app = express();
-    /** READ/GET */
-    app.get(route, [/*extra-middleware*/ crud.get()]);
-    /** ADD/PUT*/
-    app.put(route, [
-      /*extra-middleware*/
-      json(),
-      ensureBody<any, string>(["displayName", "name", "notes"]),
-      ensureID(uuid),
-      validate(req => {
-        const validation: string[] = [];
-        if (!req.body.id) {
-          validation.push("missing id");
-        }
-        return Promise.resolve(validation);
-      }),
-      ((req, _res, next) => {
-        // include user
-        try {
-          req.body.userid = (req as any).user.id;
-          return next();
-        } catch (error) {
-          return next(error);
-        }
-      }) as RequestHandler,
-      crud.put(),
-    ]);
-    /** UPDATE/POST */
-    app.post(route, [
-      /*extra-middleware*/
-      json(),
-      ensureBody(),
-      ensureID(), // reject missing id
-      crud.post(),
-    ]);
-    /** DELETE/REMOVE */
-    app.delete(route, [
-      /*extra-middleware*/
-      ensureBody(),
-      ensureID(), // reject no id
-      crud.dlete(),
-    ]);
-  });
 
   it("gets many", async () => {
     const crud = CrudController(new AsyncMap());
-    const x = await testJsonHandler(crud.get())({
+    const x = await testJsonHandler(crud.find()())({
       // request
       params: {},
     });
-    expect(x).toBe("[]");
+    expect(x).toBe("[null,[]]");
   });
 
   it("gets one", async () => {
     const map = new AsyncMap();
     const crud = CrudController(map);
-    const x = await testJsonHandler(crud.get())({
+    const x = await testJsonHandler(crud.find()())({
       // request
       params: { id: "abc" },
     });
-    expect(x).toBe("null");
+    expect(x).toBe('["abc",null]');
     map.map.set("abc", {} as any);
     expect(
-      await testJsonHandler(crud.get())({
+      await testJsonHandler(crud.find()())({
         // request
         params: { id: "abc" },
       }),
-    ).toBe('{"id":"abc"}');
+    ).toBe('["abc",{}]');
   });
 
   it("updates", async () => {
@@ -88,22 +38,22 @@ describe(require(join(__dirname, "../package.json")).name, () => {
     map.map.set("abc", {} as any);
     const crud = CrudController(map);
     expect(
-      await testJsonHandler(crud.post())({
+      await testJsonHandler(crud.update()())({
         // request
         body: { id: "abc", name: "x" },
       }),
-    ).toBe('{"id":"abc","name":"x"}');
+    ).toBe('["abc",{"name":"x"}]');
   });
 
   it("adds", async () => {
     const map = new AsyncMap();
     const crud = CrudController(map);
     expect(
-      await testJsonHandler(crud.put())({
+      await testJsonHandler(crud.add()())({
         // request
         body: { id: "abc", name: "x" },
       }),
-    ).toBe('{"id":"abc","name":"x"}');
+    ).toBe('["abc",{"name":"x"}]');
   });
   /**
    * Warning: testing AsyncMap instead of controller?
@@ -112,7 +62,7 @@ describe(require(join(__dirname, "../package.json")).name, () => {
     const map = new AsyncMap();
     map.map.set("abc", {});
     const crud = CrudController(map);
-    const x: any = await testJsonHandler(crud.put())({
+    const x: any = await testJsonHandler(crud.add()())({
       // request
       body: { id: "abc", name: "x" },
     }).catch(e => e);
@@ -124,7 +74,7 @@ describe(require(join(__dirname, "../package.json")).name, () => {
     map.map.set("abc", {});
     const crud = CrudController(map);
     const x: any = await testJsonHandler(
-      crud.dlete(req => [req.body.id, undefined], Boolean),
+      crud.remove(req => [req.body.id, undefined])((id) => Boolean(id)),
     )({
       // request
       body: { id: "abc" },
@@ -139,7 +89,7 @@ describe(require(join(__dirname, "../package.json")).name, () => {
     const map = new AsyncMap();
     const crud = CrudController(map);
     const x: any = await testJsonHandler(
-      crud.dlete(req => [req.body.id, undefined], Boolean),
+      crud.remove(req => [req.body.id, undefined])((id) => Boolean(id)),
     )({
       // request
       body: { id: "abc" },

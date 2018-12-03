@@ -5,12 +5,12 @@ install:
     yarn add @australis/tiny-crud-controller
 
 usage:  
-see ../crud-controller-demo
+see packages/crud-controller-demo
 
 build:
     
-    yarn build
+    ./scripts/run-task.js build
 
 test: 
     
-    yarn test
+    ./scripts/run-task.js test
