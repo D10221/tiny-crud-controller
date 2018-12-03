@@ -7,11 +7,25 @@ import CrudController, {
 } from "@australis/tiny-crud-controller";
 import Store from "@australis/tiny-crud-controller-store-level";
 import { Thing } from "./types";
-const store = Store("things");
-const crud = CrudController(store);
+
 const route = `/:id?`;
 
-export default () => {
+export default (db: any) => {
+  
+  const store = Store("things")(db, {
+    map: {
+      out: (key, value) => ({ id: key, ...value }),
+      in: (x: any) => {
+        // ... 
+        return {
+          ...x
+        }
+      }
+    }
+  });
+
+  const crud = CrudController(store);
+
   const router = Router();
   /** READ/GET */
   router.get(route, crud.find()((_id, data) => data));

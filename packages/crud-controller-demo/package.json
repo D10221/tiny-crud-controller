@@ -1,12 +1,20 @@
 {
   "name": "@australis/tiny-crud-controller-demo",
   "version": "0.1.0-2",
-  "main": "index.js",
+  "main": "build/index.js",  
   "license": "MIT",
+  "bin": {
+    "tiny-crud-controller-demo": "build/index.js"
+  },
+  "pkg": {
+    "scripts": "build/**/*.js"
+  },
   "private": true,
   "scripts": {
     "start": "node -r ts-node/register --inspect src/index.ts",
-    "test": "jest --ci --env=node"
+    "test": "jest --ci --env=node",
+    "build": "rimraf build && tsc  -p .",
+    "bundle": "rimraf bundle && pkg package.json --targets node10-win-x64 --out-path bundle/"
   },
   "dependencies": {
     "express": "^4.16.3",
@@ -17,6 +25,7 @@
     "@types/jest": "^23.3.9",
     "@types/uuid": "^3.4.3",
     "jest": "23.6.0",
+    "pkg": "^4.3.5",
     "rimraf": "^2.6.2",
     "ts-jest": "23.10.4",
     "ts-node": "^7.0.1",

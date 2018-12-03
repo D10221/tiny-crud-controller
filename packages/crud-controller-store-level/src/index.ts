@@ -54,7 +54,10 @@ export type Encoder = {
 export interface Options {
   serializer?: Serializer,
   encoder?: Encoder,
-  map?: (key: string, value: any) => any
+  map?: {
+    out?: (key: string, value: any) => any,
+    in?: (x: any) => any
+  }
 }
 /** */
 const catchNotFound = (returns: any = null) => (error: Error) => {
@@ -71,11 +74,11 @@ export default (name: string) => {
 
     const { serialize, deserialize } = options && options.serializer || _serializer;
     const { encode, decode, isMatch } = (options && options.encoder) || encoder(name);
-    const map = options && options.map || ((key, value) => ({ key, ...(value || {}) }));
-
+    const mapOut = options && options.map && options.map.out || ((key, value) => ({ key, ...(value || {}) }));
+    const mapIn = options && options.map && options.map.in || ((x: any) => x);
     const find = async (id?: string) => {
       if (id) {
-        return db.get(encode(id)).then((value: any) => map(id, deserialize(value)));
+        return db.get(encode(id)).then((value: any) => mapOut(id, deserialize(value)));
       } else {
         return new Promise((resolve, reject) => {
           try {
@@ -83,7 +86,7 @@ export default (name: string) => {
             let result: any[] = [];
             stream.on("data", ({ key, value }) => {
               if (isMatch(key)) {
-                result.push(map(decode(key), deserialize(value)));
+                result.push(mapOut(decode(key), deserialize(value)));
               }
             });
             stream.on("error", error => {
@@ -103,7 +106,7 @@ export default (name: string) => {
     return {
       add: async (id: string, data: {}) => {
         if (await find(id).catch(catchNotFound(false))) return Promise.reject(new Error(`Duplicate key: ${id}`));
-        return db.put(encode(id), serialize(data)) as Promise<any>
+        return db.put(encode(id), serialize(mapIn(data))) as Promise<any>
       },
       find,
       remove(id?: string) {
@@ -111,7 +114,7 @@ export default (name: string) => {
       },
       update: async (id: string, data: {}) => {
         if (!await find(id)) return Promise.reject(new Error(`Not Found key: ${id}`));
-        return db.put(encode(id), data);
+        return db.put(encode(id), serialize(mapIn(data)));
       },
       clear: () => new Promise((resolve, reject) => {
         try {
