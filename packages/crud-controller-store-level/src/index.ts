@@ -27,7 +27,7 @@ const _serializer = {
 /**
  * Key encoder
  */
-const encoder = (name: string) => {
+const _encoder = (name: string) => {
   const regex = new RegExp(`^${name}\/.*`, "i");
   return {
     isMatch(key: Buffer | string) {
@@ -54,101 +54,129 @@ export type Encoder = {
   decode(s: string): string;
   isMatch: (s: string | Buffer) => boolean;
 };
-export interface Options {
-  serializer?: Serializer;
-  encoder?: Encoder;
-  map?: {
-    out?: (key: string, value: any) => any;
-    in?: (x: any) => any;
-  };
-}
 /** */
 const catchNotFound = (returns: any = null) => (error: Error) => {
   return error && error.name === "NotFoundError"
     ? returns
     : Promise.reject(error);
-};
+}
+type MapIn = (x: any)=> any;
+type MapOut = (key: any, value: any) => any;
 /**
- * 
+ * IN MAP
  */
-export default (name: string) => {
-  return (db: any = null, options?: Options) => {
-    db = db || newLevel("store.json");
+export const timeStamper: MapIn = (x: { [key: string]: any }) => ({
+  ...x,
+  createdAt: x.createdAt || new Date(),
+  updatedAt: x.updatedAt || new Date(),
+});
+/**
+ * OUT MAP
+ */
+export const idMap = (key: any, value: any) => ({ key, ...(value || {}) });
+/**
+ *
+ */
+export default (partitionName: string, encoder?: Encoder) => {
+  const { encode, decode, isMatch } = encoder || _encoder(partitionName);
 
-    const { serialize, deserialize } =
-      (options && options.serializer) || _serializer;
-    const { encode, decode, isMatch } =
-      (options && options.encoder) || encoder(name);
-    const mapOut =
-      (options && options.map && options.map.out) ||
-      ((key, value) => ({ key, ...(value || {}) }));
-    const mapIn = (options && options.map && options.map.in) || ((x: any) => x);
-    const find = async (id?: string) => {
-      if (id) {
-        return db
-          .get(encode(id))
-          .then((value: any) => mapOut(id, deserialize(value)));
-      } else {
-        return new Promise((resolve, reject) => {
-          try {
-            const stream = db.createReadStream() as NodeJS.ReadableStream;
-            let result: any[] = [];
-            stream.on("data", ({ key, value }) => {
-              if (isMatch(key)) {
-                result.push(mapOut(decode(key), deserialize(value)));
-              }
-            });
-            stream.on("error", error => {
-              reject(error);
-            });
-            // stream.on("close", () => {});
-            stream.on("end", () => {
-              resolve(result);
-            });
-          } catch (error) {
-            return reject(error);
+  return (db: any = newLevel("store.json"), serializer?: Serializer) => {
+    const { serialize, deserialize } = serializer || _serializer;
+
+    const findOne = (id: string): any =>
+      db.get(encode(id)).then((value: any) => deserialize(value));
+
+    const findMany = (map: (id: string, value: any) => any) =>
+      new Promise((resolve, reject) => {
+        try {
+          const stream = db.createReadStream() as NodeJS.ReadableStream;
+          let result: any[] = [];
+          stream.on("data", ({ key, value }) => {
+            if (isMatch(key)) {
+              result.push(map(decode(key), deserialize(value)));
+            }
+          });
+          stream.on("error", error => {
+            reject(error);
+          });
+          // stream.on("close", () => {});
+          stream.on("end", () => {
+            resolve(result);
+          });
+        } catch (error) {
+          return reject(error);
+        }
+      });
+    /**
+     * validate: used to ? find unique values , Not Null etc
+     */
+    return (mapIn?: MapIn, mapOut?: MapOut, validate?: (data: {}, f: () => any) => any) => {   
+      mapIn = mapIn || timeStamper;
+      mapOut = mapOut || idMap;   
+      /** */
+      return {
+        /** tiny-contorller-store-member */
+        add: async (id: string, data: {}) => {
+          if (await findOne(id).catch(catchNotFound(false)))
+            return Promise.reject(new Error(`Duplicate key: ${id}`));
+          if (validate) {
+            await validate(data, () =>
+              findMany((id, value) => ({ id, value })),
+            );
           }
-        });
-      }
-    };
-    /** */
-    return {
-      add: async (id: string, data: {}) => {
-        if (await find(id).catch(catchNotFound(false)))
-          return Promise.reject(new Error(`Duplicate key: ${id}`));
-        return db.put(encode(id), serialize(mapIn(data))) as Promise<any>;
-      },
-      find,
-      remove(id?: string) {
-        return db.del(encode(id));
-      },
-      update: async (id: string, data: {}) => {
-        if (!(await find(id)))
-          return Promise.reject(new Error(`Not Found key: ${id}`));
-        return db.put(encode(id), serialize(mapIn(data)));
-      },
-      clear: () =>
-        new Promise((resolve, reject) => {
-          try {
-            const stream = db.createReadStream() as NodeJS.ReadableStream;
-            let result = 0;
-            stream.on("data", async ({ key }) => {
-              if (isMatch(key)) {
-                result = result + 1;
-                await db.del(key);
-              }
-            });
-            stream.on("error", error => {
-              reject(error);
-            });
-            // stream.on("close", () => {});
-            stream.on("end", () => {
-              resolve(result);
-            });
-          } catch (error) {
-            return reject(error);
+          return db.put(encode(id), serialize(mapIn(data))) as Promise<
+            any
+          >;
+        },
+        /** tiny-contorller-store-member */
+        find: (id?: string) => {
+          if (id) return findOne(id).then((value: any) => mapOut(id, value));
+          else findMany(mapOut);
+        },
+        findOne: (id?: string) =>
+          findOne(id).then((value: any) => mapOut(id, value)),
+        findMany: () => findMany(mapOut),
+        /** tiny-contorller-store-member */
+        remove(id?: string) {
+          return db.del(encode(id));
+        },
+        /** tiny-contorller-store-member */
+        update: async (id: string, data: {}) => {
+          const found = await findOne(id);
+          if (!found) return Promise.reject(new Error(`Not Found key: ${id}`));
+          if (validate) {
+            await validate(data, () =>
+              findMany((id, value) => ({ id, value })),
+            );
           }
-        }),
+          return db.put(
+            encode(id),
+            serialize(mapIn({ ...found, ...data })),
+          );
+        },
+        clear: () =>
+          new Promise((resolve, reject) => {
+            try {
+              const stream = db.createReadStream() as NodeJS.ReadableStream;
+              let result = 0;
+              stream.on("data", async ({ key }) => {
+                if (isMatch(key)) {
+                  result = result + 1;
+                  await db.del(key);
+                }
+              });
+              stream.on("error", error => {
+                reject(error);
+              });
+              // stream.on("close", () => {});
+              stream.on("end", () => {
+                resolve(result);
+              });
+            } catch (error) {
+              return reject(error);
+            }
+          }),
+      };
     };
   };
 };

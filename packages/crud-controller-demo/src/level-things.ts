@@ -1,5 +1,4 @@
 import { Router } from "express";
-import uuid from "uuid";
 import CrudController, {
   ensureBody,
   ensureID,
@@ -7,22 +6,13 @@ import CrudController, {
 } from "@australis/tiny-crud-controller";
 import Store from "@australis/tiny-crud-controller-store-level";
 import { Thing } from "./types";
+import { randomBytes } from "crypto";
 
 const route = `/:id?`;
 
 export default (db: any) => {
-  
-  const store = Store("things")(db, {
-    map: {
-      out: (key, value) => ({ id: key, ...value }),
-      in: (x: any) => {
-        // ... 
-        return {
-          ...x
-        }
-      }
-    }
-  });
+
+  const store = Store("things")(db)();
 
   const crud = CrudController(store);
 
@@ -34,7 +24,7 @@ export default (db: any) => {
   router.put(route, [
     /*extra-middleware*/
     ensureBody<Thing>(["name"]),
-    ensureID(uuid),
+    ensureID(()=> randomBytes(16).toString("hex")),
     validate(req => {
       const validation: string[] = [];
       if (!req.body.id) {
@@ -56,7 +46,7 @@ export default (db: any) => {
   router.delete(route, [
     /*extra-middleware*/
     ensureID(), // reject no id
-    crud.remove()(() => "ok"),
+    crud.remove()(),
   ]);
 
   return router;
