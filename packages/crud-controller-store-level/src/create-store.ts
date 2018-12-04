@@ -1,4 +1,4 @@
-import { StoreRecord, KeyEncoder, Serializer } from "./types";
+import { StoreRecord } from "./types";
 /**
  * value serializer
  */
@@ -25,7 +25,7 @@ const _encoder = (name: string) => {
     return {
         isMatch(key: Buffer | string) {
             if (typeof key === "string") return regex.test(key);
-            return key.toString();
+            return regex.test(key.toString());
         },
         decode(key: string | Buffer) {
             if (typeof key === "string") return key.split(`${name}/`)[1];
@@ -42,21 +42,27 @@ const catchNotFound = (returns: any = null) => (error: Error) => {
         ? returns
         : Promise.reject(error);
 }
+interface LevelLike {
+    createReadStream(o?: any): NodeJS.ReadableStream;
+    get(key: string): Promise<any>;
+    put(key: string, value:  any): Promise<any>;
+    del(key: string): Promise<any>;
+}
 /**
  *
  */
-export default <T extends {} = {}>(db: any, partitionName: string, keyEncoder?: KeyEncoder, serializer?: Serializer) => {
+export default <T extends {} = {}>(db: LevelLike, partitionName: string) => {
 
-    const { encode, decode, isMatch } = keyEncoder || _encoder(partitionName);
+    const { encode, decode, isMatch } = _encoder(partitionName);
 
-    const { serialize, deserialize } = serializer || _serializer;
+    const { serialize, deserialize } =  _serializer;
 
-    const findOne = <X>(id: string): Promise<X> =>
+    const findOne = (id: string): Promise<T> =>
         db.get(encode(id)).then((value: Buffer) => deserialize(value));
 
-    const findMany = <X>() => new Promise<StoreRecord<X>[]>((resolve, reject) => {
+    const findMany = () => new Promise<StoreRecord<T>[]>((resolve, reject) => {
         try {
-            const stream = db.createReadStream() as NodeJS.ReadableStream;
+            const stream = db.createReadStream();
             let result: ([string, any])[] = [];
             stream.on("data", ({ key, value }) => {
                 if (isMatch(key)) {
@@ -78,23 +84,23 @@ export default <T extends {} = {}>(db: any, partitionName: string, keyEncoder?: 
     return {
         /** tiny-contorller-store-member */
         add: async (id: string, data: T) => {
-            if (await findOne<T>(id).catch(catchNotFound(false)))
+            if (await findOne(id).catch(catchNotFound(false)))
                 return Promise.reject(new Error(`Duplicate key: ${id}`));
             return db.put(encode(id), serialize(data)
             );
         },
         /** tiny-controller-store-member */
         update: async (id: string, data: Partial<T>) => {
-            const found = await findOne<T>(id);
+            const found = await findOne(id).catch(catchNotFound(null));
             if (!found) return Promise.reject(new Error(`Not Found key: ${id}`));
             return db.put(
                 encode(id),
                 serialize(Object.assign(found, data)),
             );
         },
-        findOne: (id: string): Promise<T> => findOne<T>(id),
+        findOne,
         // ...
-        findMany: (): Promise<StoreRecord<T>[]> => findMany<T>(),
+        findMany,
         /** tiny-contorller-store-member */
         async remove(id?: string): Promise<any> {
             await findOne(id); //throws 
@@ -103,7 +109,7 @@ export default <T extends {} = {}>(db: any, partitionName: string, keyEncoder?: 
         clear: () =>
             new Promise<any>((resolve, reject) => {
                 try {
-                    const stream = db.createReadStream() as NodeJS.ReadableStream;
+                    const stream = db.createReadStream();
                     let result = 0;
                     stream.on("data", async ({ key }) => {
                         if (isMatch(key)) {
