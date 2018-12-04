@@ -22,7 +22,12 @@ export default function CrudController<TStore extends Store>(store: TStore) {
       return async (req, res, next) => {
         try {
           const [id] = payload(req, res);
-          let ret: any = (await store.find(id)) || null;
+          let ret: any;
+          if (id) {
+            ret = await store.findOne(id)
+          } else {
+            ret = await store.findMany()
+          }
           return res.json(transform(id, ret));
         } catch (error) {
           return next(error);
@@ -61,7 +66,7 @@ export default function CrudController<TStore extends Store>(store: TStore) {
         try {
           const [id, data] = payload(req, res);
           await store.add(id, data);
-          const ret = await store.find(id);
+          const ret = await store.findOne(id);
           return res.json(transform(id, ret));
         } catch (error) {
           return next(error);
@@ -82,7 +87,7 @@ export default function CrudController<TStore extends Store>(store: TStore) {
         try {
           const [id, data] = payload(req, res);
           await store.update(id, data);
-          const ret = await store.find(id);
+          const ret = await store.findOne(id);
           return res.json(transform(id, ret));
         } catch (error) {
           return next(error);

@@ -2,7 +2,8 @@ import { Request, Response } from "express";
 
 /** */
 export interface Store {
-  find(...args: any[]): Promise<any>;
+  findOne(...args: any[]): Promise<any>;
+  findMany(...args: any[]): Promise<any>;
   remove(args?: any): Promise<any>;
   add(...args: any[]): Promise<any>;
   update(...args: any[]): Promise<any>;

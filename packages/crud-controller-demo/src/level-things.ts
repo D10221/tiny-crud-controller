@@ -12,7 +12,7 @@ const route = `/:id?`;
 
 export default (db: any) => {
 
-  const store = Store("things")(db)();
+  const store = Store(db, "things");
 
   const crud = CrudController(store);
 
@@ -24,7 +24,7 @@ export default (db: any) => {
   router.put(route, [
     /*extra-middleware*/
     ensureBody<Thing>(["name"]),
-    ensureID(()=> randomBytes(16).toString("hex")),
+    ensureID(() => randomBytes(16).toString("hex")),
     validate(req => {
       const validation: string[] = [];
       if (!req.body.id) {

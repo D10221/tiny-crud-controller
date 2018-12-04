@@ -10,28 +10,27 @@ export default <T extends Document, QueryHelpers = {}>(
         ...data,
       });
     },
-    find(id?: string) {
-      if (id) {
-        return new Promise((resolve, reject) =>
-          model
-            .findById(id)
-            .lean()
-            .exec((err, res) => {
-              if (err) reject(err);
-              else resolve(res);
-            }),
-        );
-      } else {
-        return new Promise((resolve, reject) =>
-          model
-            .find()
-            .lean()
-            .exec((err, res) => {
-              if (err) reject(err);
-              else resolve(res);
-            }),
-        );
-      }
+    findOne(id: string) {
+      return new Promise((resolve, reject) =>
+        model
+          .findById(id)
+          .lean()
+          .exec((err, res) => {
+            if (err) reject(err);
+            else resolve(res);
+          }),
+      );
+    },
+    findMany() {
+      return new Promise((resolve, reject) =>
+        model
+          .find()
+          .lean()
+          .exec((err, res) => {
+            if (err) reject(err);
+            else resolve(res);
+          }),
+      )
     },
     remove(id?: string) {
       return new Promise((resolve, reject) =>
