@@ -14,7 +14,7 @@
     "start": "node -r ts-node/register --inspect src/index.ts",
     "test": "jest --ci --env=node",
     "build": "rimraf build && tsc  -p .",
-    "bundle": "rimraf bundle && pkg package.json --targets node10-win-x64 --out-path bundle/"
+    "bundle": "rimraf bundle && pkg package.json --targets node10-win-x64,node10-linux-x64 --out-path bundle/"
   },
   "dependencies": {
     "express": "^4.16.3",
