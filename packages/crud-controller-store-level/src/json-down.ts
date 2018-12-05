@@ -9,8 +9,7 @@ import os from "os";
 import path from "path";
 import mkdirp from "mkdirp";
 import MemDOWN from "memdown";
-
-var fs = os.hostname() === "runtime" ? require("./runtime-fs") : require("fs");
+import fs from "fs";
 
 function serializeStore(store: Indexer) {
     var result: Indexer = {};
@@ -124,7 +123,9 @@ export default class JsonDOWN extends MemDOWN {
     };
 
     _close(cb?: Callback) {
-        this._writeToDisk(cb);
+        this._writeToDisk(()=>{
+            super._close(cb)
+        });
     }
 
     _writeToDisk(cb?: Callback) {

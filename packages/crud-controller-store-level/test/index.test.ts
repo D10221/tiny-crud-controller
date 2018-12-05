@@ -1,6 +1,6 @@
 import { existsSync, unlinkSync } from "fs";
 import path from "path";
-import levelStore, { MemDb, JsonDb } from "../src";
+import levelStore, { MemDb, JsonDb, LevelDB } from "../src";
 import BasicTable from "../src/basic-table";
 import { Store } from "../src/types";
 
@@ -8,22 +8,21 @@ interface Thing extends Object {
   name: string;
 }
 
-const dbPath = path.resolve(process.cwd(), "test-store.json");
-
+const jsonDbPath = path.resolve(process.cwd(), "json-test-store.json");
 
 let memDB: any;
 let memStore: Store<Thing>;
 
-if (existsSync(dbPath)) {
-  unlinkSync(dbPath);
+if (existsSync(jsonDbPath)) {
+  unlinkSync(jsonDbPath);
 }
-let jsonDB: any = JsonDb(dbPath);
+let jsonDB: any = JsonDb(jsonDbPath);
 
 beforeEach(async () => {
   if (memDB) {
     await memDB.close();
     memDB = null;
-  }  
+  }
   memDB = MemDb()
   memStore = await levelStore<Thing>(memDB, "things");
 });
@@ -61,11 +60,12 @@ it("more stores", async () => {
   expect(await store2.add("a1", { name: "aaa1" })).toBe(undefined);
 });
 
-it("persisted", async () => {
+it("persisted/json-db", async () => {
   const _s = (await levelStore(jsonDB, "moreThings2"));
   const value = { name: "aaa" };
   expect(await _s.add("a", value)).toBe(undefined);
-  const dbFile = require(dbPath);
+  // await jsonDB.close();  
+  const dbFile = require(jsonDbPath);
   expect(dbFile["things/a"]).toBe(undefined);
   expect(dbFile["moreThings/a"]).toBe(undefined);
   expect(dbFile["moreThings2/a"]).toBe(JSON.stringify(value));
@@ -80,14 +80,14 @@ it("extends", async () => {
   expect(x.id).toBe("x");
 });
 
-it("validates", async () => {
+it("validates: 1000/jsons", async () => {
   // 1089ms with memdown
   jest.setTimeout(60000);
   const s = await levelStore<Thing>(jsonDB, "things2", [
     { key: "name", required: true, unique: true },
   ]);
-  // 40.202s with jsonDown
-  for (let i = 0; i < 10000; i++) {
+  // 10000 records with 40.202s with jsonDown
+  for (let i = 0; i < 1000; i++) {
     await s.add(`indexed${i}`, { name: `x${i}` });
   }
   expect(await s.add("y", { name: null }).catch(err => err.message)).toBe(
@@ -102,10 +102,10 @@ it("validates", async () => {
   );
 });
 
-it("10000", async () => {
+it("10000's", async () => {
   // 1089ms with memdown
   jest.setTimeout(60000);
-  const s = await levelStore<Thing>(memDB, "things3");
+  const s = await levelStore<Thing>(LevelDB("./testdb"), "things3");
   console.time("add:x10000");
   for (let i = 0; i < 10000; i++) {
     await s.add(`indexed${i}`, { name: `x${i}` });

@@ -16,10 +16,10 @@
     "@types/mkdirp": "^0.5.2",
     "encoding-down": "^5.0.4",
     "jsondown": "^1.0.0",
+    "leveldown": "^4.0.1",
     "levelup": "^3.1.1",
     "memdown": "^3.0.0",
-    "mkdirp": "^0.5.1",
-    "mongoose": "^5.3.14"
+    "mkdirp": "^0.5.1"
   },
   "devDependencies": {
     "@types/jest": "^23.3.9",

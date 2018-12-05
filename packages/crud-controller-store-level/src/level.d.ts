@@ -22,3 +22,7 @@ declare module "memdown" {
     }
     export default MemDOWN;
 }
+declare module "leveldown"{
+    const leveldown:any;
+    export default leveldown;
+}
