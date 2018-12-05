@@ -1,22 +1,22 @@
 import { StoreRecord } from "./types";
-/**
- * value serializer
- */
-const _serializer = {
-  serialize: JSON.stringify,
-  deserialize(value: Buffer | string) {
-    if (value === null || value === undefined) {
-      return null;
-    }
-    if (value instanceof Buffer) {
-      return JSON.parse(value.toString("utf-8"));
-    }
-    if (typeof value === "string") {
-      return JSON.parse(value);
-    }
-    throw new Error("Not Implemented");
-  },
-};
+// /**
+//  * value serializer
+//  */
+// const _serializer = {
+//   serialize: JSON.stringify,
+//   deserialize(value: Buffer | string) {
+//     if (value === null || value === undefined) {
+//       return null;
+//     }
+//     if (value instanceof Buffer) {
+//       return JSON.parse(value.toString("utf-8"));
+//     }
+//     if (typeof value === "string") {
+//       return JSON.parse(value);
+//     }
+//     throw new Error("Not Implemented");
+//   },
+// };
 /**
  * Key encoder
  */
@@ -43,7 +43,18 @@ const catchNotFound = (returns: any = null) => (error: Error) => {
     : Promise.reject(error);
 };
 interface LevelLike {
-  createReadStream(o?: any): NodeJS.ReadableStream;
+  createReadStream(o?: {
+    gt?: any,
+    lt?: any,
+    /** @default true */
+    keys?: boolean,
+    /** @default true */
+    values?: boolean,
+    /** @default -1 */
+    limit?: number,
+    reverse?: boolean,
+
+  }): NodeJS.ReadableStream;
   get(key: string): Promise<any>;
   put(key: string, value: any): Promise<any>;
   del(key: string): Promise<any>;
@@ -70,19 +81,41 @@ export default async <T extends Indexer<any> = {}>(
 ) => {
   const { encode, decode, isMatch } = _encoder(partitionName);
 
-  const { serialize, deserialize } = _serializer;
+  // const { serialize, deserialize } = _serializer;
+
+  const getKeys = () =>
+    new Promise<string[]>((resolve, reject) => {
+      try {
+        const stream = db.createReadStream({ values: false });
+        let result: string[] = [];
+        stream.on("data", (key) => {
+          if (isMatch(key)) {
+            result.push(decode(key));
+          }
+        });
+        stream.on("error", error => {
+          reject(error);
+        });
+        // stream.on("close", () => {});
+        stream.on("end", () => {
+          resolve(result);
+        });
+      } catch (error) {
+        return reject(error);
+      }
+    });
 
   const findOne = (id: string): Promise<T> =>
-    db.get(encode(id)).then((value: Buffer) => deserialize(value));
+    db.get(encode(id)).then((value: any) => (value));
 
   const findMany = () =>
     new Promise<StoreRecord<T>[]>((resolve, reject) => {
       try {
         const stream = db.createReadStream();
-        let result: ([string, any])[] = [];
+        let result: StoreRecord<T>[] = [];
         stream.on("data", ({ key, value }) => {
           if (isMatch(key)) {
-            result.push([decode(key), deserialize(value)]);
+            result.push([decode(key), value]);
           }
         });
         stream.on("error", error => {
@@ -109,12 +142,29 @@ export default async <T extends Indexer<any> = {}>(
         ),
     );
 
-  let uniques = await uniqueIndex();
+  const uniques = await uniqueIndex();
+  let $keys = await getKeys();
+
+  const addKey = (id: string) => <X>(x: X): X => {
+    $keys.push(id);
+    return x;
+  }
+
+  const removeKey = (id: string) => <X>(x: X): X => {
+    $keys = $keys.filter(k => k !== id);
+    return x;
+  }
+
+  const clearKeys = () => <X>(x: X): X => {
+    $keys = [];
+    return x;
+  }
 
   return {
     /** tiny-contorller-store-member */
     add: async (id: string, data: T) => {
-      if (await findOne(id).catch(catchNotFound(false)))
+      // if (await findOne(id).catch(catchNotFound(false)))
+      if ($keys.indexOf(id) !== -1)
         return Promise.reject(new Error(`Duplicate key: ${id}`));
 
       for (const schema of schemas) {
@@ -132,19 +182,19 @@ export default async <T extends Indexer<any> = {}>(
       const found = uniques.find(x => x.values.indexOf(data[x.key]) != -1);
       if (found) {
         return Promise.reject(new Error(`${found.key} 'Must be unique'`));
-      }      
+      }
       for (const u of schemas.filter(schema => schema.unique)) {
         const x = uniques.find(x => x.key === u.key);
         if (x) x.values.push(data[u.key]);
       }
       // 
-      return db.put(encode(id), serialize(data));
+      return db.put(encode(id), data).then(addKey(id));
     },
     /** tiny-controller-store-member */
     update: async (id: string, data: Partial<T>) => {
       const found = await findOne(id).catch(catchNotFound(null));
       if (!found) return Promise.reject(new Error(`Not Found key: ${id}`));
-      return db.put(encode(id), serialize(Object.assign(found, data)));
+      return db.put(encode(id), (Object.assign(found, data)));
     },
     findOne,
     // ...
@@ -152,8 +202,8 @@ export default async <T extends Indexer<any> = {}>(
     /** tiny-contorller-store-member */
     async remove(id?: string): Promise<any> {
       await findOne(id); //throws
-      return db.del(encode(id));
-    },
+      return db.del(encode(id)).then(removeKey(id));
+    },    
     clear: () =>
       new Promise<any>((resolve, reject) => {
         try {
@@ -175,6 +225,6 @@ export default async <T extends Indexer<any> = {}>(
         } catch (error) {
           return reject(error);
         }
-      }),
+      }).then(clearKeys()),     
   };
 };

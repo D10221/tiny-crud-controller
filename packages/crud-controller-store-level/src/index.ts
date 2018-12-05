@@ -1,13 +1,15 @@
+import encoding from "encoding-down";
 import levelup from "levelup";
-import jsonDown from "jsondown";
-import { join, isAbsolute } from "path";
+import jsonDown from "./json-down";
 import MemDown from "memdown";
-
-export const jsonDb = (location: string) =>
-  levelup(
-    jsonDown(isAbsolute(location) ? location : join(process.cwd(), location)),
-  );
-
-export const memDb = (location?: string) => levelup(new MemDown(location));
+/** */
+export const jsonDb = (location: string): any => levelup(encoding(new jsonDown(location),{
+  valueEncoding: "json"
+}),
+);
+/** */
+export const memDb: any = (location?: string) => levelup(encoding(new MemDown(location), {
+  valueEncoding: "json"
+}));
 
 export { default } from "./create-store";

@@ -1,3 +1,4 @@
+/** @description Tuple, [0]=id, [1]=value */
 export type StoreRecord<T> = [string, T];
 
 export interface Store<T> {
@@ -6,7 +7,7 @@ export interface Store<T> {
     findOne(id: string): Promise<T>,
     findMany(): Promise<StoreRecord<T>[]>,
     remove(id: string): Promise<any>,
-    clear():Promise<any>,
+    clear(): Promise<any>,
 }
 
 export type Serializer = {
