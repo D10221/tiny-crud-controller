@@ -110,7 +110,7 @@ export default class JsonDOWN extends MemDOWN {
                         self._isLoadingFromFile = true;
                         try {
                             try {
-                                self._batch(jsonToBatchOps(data[self.location]), {}, noop);
+                                self._batch(jsonToBatchOps(data), {}, noop);
                             } finally {
                                 self._isLoadingFromFile = false;
                             }
