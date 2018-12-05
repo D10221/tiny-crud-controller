@@ -51,19 +51,22 @@ interface LevelLike {
 const isNull = (x: any): boolean => x === null || x === undefined;
 const isFunction = (x: any) => typeof x === "function";
 
-type Schema = {
+type Schema<T> = {
+  key: keyof T;
   required?: boolean | undefined;
   unique?: boolean | undefined;
-  defaultValue?: any | (() => any) | undefined;
+  default?: any | undefined;
 };
+interface Indexer<T> {
+  [key: string]: T;
+}
 /**
  *
  */
-export default async <T extends { [key: string]: any } = {}>(
+export default async <T extends Indexer<any> = {}>(
   db: LevelLike,
   partitionName: string,
-  //Wrong type
-  schemap?: Record<keyof T, Schema>,
+  schemas: Schema<T>[] = [],
 ) => {
   const { encode, decode, isMatch } = _encoder(partitionName);
 
@@ -94,16 +97,13 @@ export default async <T extends { [key: string]: any } = {}>(
       }
     });
 
-  const schemas = Object.keys(schemap||{})
-    .filter(key => Boolean(schemap[key]))
-    .map(key => ({ key, ...schemap[key] }));
-
+  // todo:is this faster than saving indexes ?
   const uniqueIndex = () =>
     Promise.all(
       schemas
         .filter(schema => schema.unique)
-        .map(({ key }) =>          
-            findMany()
+        .map(({ key }) =>
+          findMany()
             .then(x => x.map(([_id, value]) => value[key]))
             .then(values => ({ key, values })),
         ),
@@ -119,26 +119,25 @@ export default async <T extends { [key: string]: any } = {}>(
 
       for (const schema of schemas) {
         if (schema.required && isNull(data[schema.key])) {
-          const value = isFunction(schema.defaultValue)
-            ? schema.defaultValue()
-            : schema.defaultValue;
+          const value = isFunction(schema.default)
+            ? schema.default()
+            : schema.default;
           if (isNull(value)) {
             return Promise.reject(new Error(`${schema.key} (Required)`));
           }
           data[schema.key] = value;
         }
       }
-
+      // todo: is this faster than saving indexes ?       
       const found = uniques.find(x => x.values.indexOf(data[x.key]) != -1);
       if (found) {
         return Promise.reject(new Error(`${found.key} 'Must be unique'`));
-      }
-
+      }      
       for (const u of schemas.filter(schema => schema.unique)) {
         const x = uniques.find(x => x.key === u.key);
         if (x) x.values.push(data[u.key]);
       }
-
+      // 
       return db.put(encode(id), serialize(data));
     },
     /** tiny-controller-store-member */

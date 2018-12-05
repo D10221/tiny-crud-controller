@@ -1,7 +1,8 @@
 import { existsSync, unlinkSync } from "fs";
 import path from "path";
-import levelStore, { jsonDb } from "../src";
+import levelStore, { jsonDb, memDb } from "../src";
 import BasicTable from "../src/basic-table";
+import { Store } from "../src/types";
 
 interface Thing extends Object {
   name: string;
@@ -12,22 +13,25 @@ if (existsSync(dbPath)) {
   unlinkSync(dbPath);
 }
 const db = jsonDb(dbPath);
+const mdb = memDb(dbPath);
+
+let store: Store<Thing>;
+beforeAll(async () => {
+  store = await levelStore<Thing>(db, "things");
+});
 
 describe(require("../package.json").name, () => {
   it("finds many", async () => {
-    const store = await levelStore<Thing>(db, "things");
-    expect(await (store).findMany()).toMatchObject([]);
+    expect(await store.findMany()).toMatchObject([]);
   });
 
   it("throws not found", async () => {
-    const store = await levelStore<Thing>(db, "things");
-    expect(await (store).findOne("a").catch((error: any) => error.name)).toMatch(
+    expect(await store.findOne("a").catch((error: any) => error.name)).toMatch(
       "NotFound",
     );
   });
 
   it("adds new, etc ...", async () => {
-    const store = await levelStore<Thing>(db, "things");
     await store.clear();
     expect(await store.add("a", { name: "aaa" })).toBe(undefined);
     // ...
@@ -41,7 +45,6 @@ describe(require("../package.json").name, () => {
   });
 
   it("more stores", async () => {
-    const store = await levelStore<Thing>(db, "things");
     const store2 = await levelStore(jsonDb(dbPath), "moreThings");
     expect(await store.add("a", { name: "aaa" })).toBe(undefined);
     expect(await store2.add("a", { name: "aaa" })).toBe(undefined);
@@ -54,30 +57,37 @@ describe(require("../package.json").name, () => {
     }
   });
 });
-
 //
 describe("basic table", () => {
   it("?", async () => {
-    const bt = BasicTable(await levelStore<Thing>(jsonDb(dbPath), "things"));
+    const bt = BasicTable(store);
     await bt.add("x", { name: "x" });
     const x = await bt.findOne("x");
     //
     expect((x.createdAt as Date).getDate()).toBe(new Date().getDate());
+    expect(x.id).toBe("x");
   });
 });
 //
 describe("validate", () => {
   it("?", async () => {
-    const s = await levelStore<Thing>(jsonDb(dbPath), "things2", { name: { required: true, unique: true }} as any);  
-    await s.add("x2", { name: "x" });
+    // 1089ms with memdown
+    jest.setTimeout(60000);
+    const s = await levelStore<Thing>(mdb, "things2", [
+      { key: "name", required: true, unique: true },
+    ]);
+    for (let i = 0; i < 10000; i++) {
+      await s.add(`indexed${i}`, { name: `x${i}` });
+    }
     expect(await s.add("y", { name: null }).catch(err => err.message)).toBe(
       "name (Required)",
     );
     expect(
       await s.add("y1", { name: undefined }).catch(err => err.message),
     ).toBe("name (Required)");
-    expect(
-      await s.add("x3", { name: "x" }).catch(error => error.message),
-    ).toBe("name 'Must be unique'");
+    
+    expect(await s.add("xxxx", { name: "x0" }).catch(error => error.message)).toBe(
+      "name 'Must be unique'",
+    );
   });
 });
