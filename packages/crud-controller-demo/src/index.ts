@@ -1,6 +1,6 @@
 import express, { json, Express } from "express";
 import mapOfThings from "./map-of-things";
-import { jsonDb } from "@australis/tiny-crud-controller-store-level";
+import { LevelDB } from "@australis/tiny-crud-controller-store-level";
 // ...
 const app = express();
 
@@ -24,7 +24,7 @@ async function configure(app: Express) {
     const { default: levelThings } = await import("./level-things");
     app.use("/api/level/things", [
       json(),
-      levelThings(jsonDb(process.env.LEVEL_DB || "store.json")),
+      await levelThings(LevelDB("db")),
     ]);
     return app;
   } catch (error) {

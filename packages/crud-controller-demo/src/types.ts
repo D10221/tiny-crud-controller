@@ -1,7 +1,7 @@
 /** */
 export interface Thing {  
-  id: string;
+  id?: string;
   name: string;
-  createdAt: number;  
-  updatedAt: number;
+  createdAt?: number;  
+  updatedAt?: number;
 }

@@ -20,3 +20,5 @@ export const MemDb: any = (location?: string) => levelup(encoding(new MemDown(lo
 }));
 
 export { default } from "./create-store";
+export { default as basicTable } from "./basic-table";
+export { default as extends } from "./extend";

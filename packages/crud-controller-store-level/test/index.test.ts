@@ -1,8 +1,10 @@
 import { existsSync, unlinkSync } from "fs";
 import path from "path";
-import levelStore, { MemDb, JsonDb, LevelDB } from "../src";
+import levelStore, { MemDb, JsonDb, LevelDB, basicTable } from "../src";
 import BasicTable from "../src/basic-table";
 import { Store } from "../src/types";
+import rimraf from "rimraf";
+import { SchemaError } from "../src/schema-error";
 
 interface Thing extends Object {
   name: string;
@@ -17,7 +19,12 @@ if (existsSync(jsonDbPath)) {
   unlinkSync(jsonDbPath);
 }
 let jsonDB: any = JsonDb(jsonDbPath);
-
+let leveldb: any;
+const leveldbpath = "./testdb";
+beforeAll(() => {
+  rimraf.sync(leveldbpath);
+  leveldb = LevelDB(leveldbpath);
+});
 beforeEach(async () => {
   if (memDB) {
     await memDB.close();
@@ -61,9 +68,9 @@ it("more stores", async () => {
 });
 
 it("persisted/json-db", async () => {
-  const _s = (await levelStore(jsonDB, "moreThings2"));
+  const store = (await levelStore(jsonDB, "moreThings2"));
   const value = { name: "aaa" };
-  expect(await _s.add("a", value)).toBe(undefined);
+  expect(await store.add("a", value)).toBe(undefined);
   // await jsonDB.close();  
   const dbFile = require(jsonDbPath);
   expect(dbFile["things/a"]).toBe(undefined);
@@ -82,7 +89,7 @@ it("extends", async () => {
 
 it("validates: 1000/jsons", async () => {
   // 1089ms with memdown
-  jest.setTimeout(60000);
+  // jest.setTimeout(60000);
   const s = await levelStore<Thing>(jsonDB, "things2", [
     { key: "name", required: true, unique: true },
   ]);
@@ -90,32 +97,53 @@ it("validates: 1000/jsons", async () => {
   for (let i = 0; i < 1000; i++) {
     await s.add(`indexed${i}`, { name: `x${i}` });
   }
-  expect(await s.add("y", { name: null }).catch(err => err.message)).toBe(
-    "name (Required)",
-  );
-  expect(
-    await s.add("y1", { name: undefined }).catch(err => err.message),
-  ).toBe("name (Required)");
+  expect(await s.add("y", { name: null }).catch(err => err))
+    .toBeInstanceOf(SchemaError);
 
-  expect(await s.add("xxxx", { name: "x0" }).catch(error => error.message)).toBe(
-    "name 'Must be unique'",
-  );
+  expect(
+    await s.add("y1", { name: undefined }).catch(err => err),
+  ).toBeInstanceOf(SchemaError);
+
+  expect(await s.add("xxxx", { name: "x0" }).catch(error => error)).toBeInstanceOf(SchemaError);
 });
 
 it("10000's", async () => {
   // 1089ms with memdown
-  jest.setTimeout(60000);
-  const s = await levelStore<Thing>(LevelDB("./testdb"), "things3");
+  // jest.setTimeout(60000);
+  const store = basicTable(await levelStore<Thing>(leveldb, "things3"));
+  console.time("add:1");
+  await store.add("1", { name: "1" });
+  console.timeEnd("add:1");
   console.time("add:x10000");
   for (let i = 0; i < 10000; i++) {
-    await s.add(`indexed${i}`, { name: `x${i}` });
+    await store.add(`indexed${i}`, { name: `x${i}` });
   }
   console.timeEnd("add:x10000");
   console.time("get:x9999");
-  expect((await s.findOne("indexed9")).name).toBe("x9");
+  expect((await store.findOne("indexed9")).name).toBe("x9");
   console.timeEnd("get:x9999");
   console.time("find:x10000");
-  expect((await s.findMany()).length).toBe(10000);
+  expect((await store.findMany()).length).toBe(10001);
   console.timeEnd("find:x10000");
 });
+
+it("Honors schema", async () => {
+  const store = await levelStore<Thing>(jsonDB, "things4", [
+    { key: "name", required: true, unique: true },
+  ]);
+  expect(await store.add("a", { x: "aaa" } as any).catch(e => e))
+    .toBeInstanceOf(SchemaError)
+})
+
+it("Honors schema/type", async () => {
+  const store = await levelStore<Thing>(jsonDB, "things4", [
+    { key: "name", required: true, unique: true, type: "string" },
+  ]);
+  const e = await store.add("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", { name: 1 as any }).catch(e => e);
+  expect(e)
+    .toBeInstanceOf(SchemaError);
+
+  expect(e.message)
+    .toContain("instead of number")
+})
 

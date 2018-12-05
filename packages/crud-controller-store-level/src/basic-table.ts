@@ -28,4 +28,4 @@ const timeStamper = <T extends { [key: string]: any }>(x: T): T & TimeStamped =>
     updatedAt: x.updatedAt || new Date(),
 });
 
-export default <T>(store: Store<T>) => extend(store, timeStamper, record=> datesOut(idMap(record)));
+export default <T>(store: Store<T>) => extend(store, timeStamper, record => datesOut(idMap(record)));

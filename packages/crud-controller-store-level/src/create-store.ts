@@ -1,22 +1,5 @@
 import { StoreRecord } from "./types";
-// /**
-//  * value serializer
-//  */
-// const _serializer = {
-//   serialize: JSON.stringify,
-//   deserialize(value: Buffer | string) {
-//     if (value === null || value === undefined) {
-//       return null;
-//     }
-//     if (value instanceof Buffer) {
-//       return JSON.parse(value.toString("utf-8"));
-//     }
-//     if (typeof value === "string") {
-//       return JSON.parse(value);
-//     }
-//     throw new Error("Not Implemented");
-//   },
-// };
+import { SchemaError } from "./schema-error";
 /**
  * Key encoder
  */
@@ -67,6 +50,10 @@ type Schema<T> = {
   required?: boolean | undefined;
   unique?: boolean | undefined;
   default?: any | undefined;
+  /**
+   * whatever returns typeof
+   */
+  type?: string | undefined;
 };
 interface Indexer<T> {
   [key: string]: T;
@@ -141,6 +128,8 @@ export default async <T extends Indexer<any> = {}>(
             .then(values => ({ key, values })),
         ),
     );
+  /** */
+  const schemaKeys = schemas.map(x => x.key);
 
   const uniques = await uniqueIndex();
   let $keys = await getKeys();
@@ -163,25 +152,41 @@ export default async <T extends Indexer<any> = {}>(
   return {
     /** tiny-contorller-store-member */
     add: async (id: string, data: T) => {
-      // if (await findOne(id).catch(catchNotFound(false)))
-      if ($keys.indexOf(id) !== -1)
-        return Promise.reject(new Error(`Duplicate key: ${id}`));
-
-      for (const schema of schemas) {
-        if (schema.required && isNull(data[schema.key])) {
-          const value = isFunction(schema.default)
-            ? schema.default()
-            : schema.default;
-          if (isNull(value)) {
-            return Promise.reject(new Error(`${schema.key} (Required)`));
+      if (schemaKeys.length) {
+        for (const key of Object.keys(data)) {
+          if (schemaKeys.indexOf(key) === -1) {
+            return Promise.reject(new SchemaError(`${key} Not in ${partitionName}`));
           }
-          data[schema.key] = value;
+          const schema = schemas.find(x => x.key === key);
+          // Required
+          if (schema.required && isNull(data[schema.key])) {
+            const value = isFunction(schema.default)
+              ? schema.default()
+              : schema.default;
+            if (isNull(value)) {
+              return Promise.reject(new SchemaError(`${partitionName}: '${schema.key}' is Required`));
+            }
+            data[schema.key] = value;
+          }
+          //type
+          {
+            const value = data[schema.key];
+            if (!isNull(value) && schema.type) {
+              const type = typeof value
+              if (type !== schema.type) {
+                return Promise.reject(new SchemaError(`${partitionName}: '${schema.key}' should be ${schema.type} instead of ${type}`));
+              }
+            }
+          }
         }
       }
+      // Unique PRI-KEY
+      if ($keys.indexOf(id) !== -1) return Promise.reject(new SchemaError(`Duplicate key: ${id}`));     
+      // Unique values
       // todo: is this faster than saving indexes ?       
       const found = uniques.find(x => x.values.indexOf(data[x.key]) != -1);
       if (found) {
-        return Promise.reject(new Error(`${found.key} 'Must be unique'`));
+        return Promise.reject(new SchemaError(`${found.key} 'Must be unique'`));
       }
       for (const u of schemas.filter(schema => schema.unique)) {
         const x = uniques.find(x => x.key === u.key);
@@ -192,6 +197,7 @@ export default async <T extends Indexer<any> = {}>(
     },
     /** tiny-controller-store-member */
     update: async (id: string, data: Partial<T>) => {
+      // Todo: validate/schema, reject IDs, honor uniqe values
       const found = await findOne(id).catch(catchNotFound(null));
       if (!found) return Promise.reject(new Error(`Not Found key: ${id}`));
       return db.put(encode(id), (Object.assign(found, data)));
@@ -203,7 +209,7 @@ export default async <T extends Indexer<any> = {}>(
     async remove(id?: string): Promise<any> {
       await findOne(id); //throws
       return db.del(encode(id)).then(removeKey(id));
-    },    
+    },
     clear: () =>
       new Promise<any>((resolve, reject) => {
         try {
@@ -225,6 +231,7 @@ export default async <T extends Indexer<any> = {}>(
         } catch (error) {
           return reject(error);
         }
-      }).then(clearKeys()),     
+      }).then(clearKeys()),
   };
 };
+
