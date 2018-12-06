@@ -4,7 +4,7 @@ import CrudController, {
   ensureID,
   validate,
 } from "@australis/tiny-crud-controller";
-import Store, { mapOut } from "@australis/tiny-crud-controller-store-level";
+import Store, { mapOut } from "@australis/tiny-store-level";
 import { Thing } from "./types";
 import { randomBytes } from "crypto";
 

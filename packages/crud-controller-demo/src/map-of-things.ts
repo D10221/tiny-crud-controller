@@ -5,7 +5,7 @@ import CrudController, {
   ensureID,
   validate,
 } from "@australis/tiny-crud-controller";
-import AsyncMap from "@australis/tiny-crud-controller-store-asyncmap";
+import AsyncMap from "@australis/tiny-store-asyncmap";
 import { Thing } from "./types";
 
 const crud = CrudController(new AsyncMap());

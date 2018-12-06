@@ -1,4 +1,4 @@
-import AsyncMap from "@australis/tiny-crud-controller-store-asyncmap";
+import AsyncMap from "@australis/tiny-store-asyncmap";
 import { RequestHandler } from "express";
 import { join } from "path";
 import CrudController from "../src";

@@ -1,6 +1,6 @@
 import express, { json, Express } from "express";
 import mapOfThings from "./map-of-things";
-import { LevelDB } from "@australis/tiny-crud-controller-store-level";
+import { LevelDB } from "@australis/tiny-store-level";
 // ...
 const app = express();
 

@@ -4,7 +4,7 @@ import CrudController, {
   ensureID,
   validate,
 } from "@australis/tiny-crud-controller";
-import Store from "@australis/tiny-crud-controller-store-mongo";
+import Store from "@australis/tiny-store-mongo";
 import { Thing } from "./types";
 import { Mongoose } from "mongoose";
 

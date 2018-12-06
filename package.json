@@ -5,10 +5,10 @@
   "main": "index.js",
   "license": "MIT",
   "workspaces": [
-    "packages/crud-controller-store-asyncmap",
-    "packages/crud-controller-store-mssql",
-    "packages/crud-controller-store-mongo",
-    "packages/crud-controller-store-level",
+    "packages/tiny-store-asyncmap",
+    "packages/tiny-store-mssql",
+    "packages/tiny-store-mongo",
+    "packages/tiny-store-level",
     "packages/crud-controller",
     "packages/crud-controller-demo"
   ]

@@ -5,7 +5,7 @@ import CrudController, {
   ensureID,
   validate,
 } from "@australis/tiny-crud-controller";
-import Store from "@australis/tiny-crud-controller-store-mssql";
+import Store from "@australis/tiny-store-mssql";
 import { Thing } from "./types";
 
 const script = `/* Things */
