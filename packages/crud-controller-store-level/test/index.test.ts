@@ -109,6 +109,8 @@ it("validates: 1000/jsons", async () => {
 
 it("10000's", async () => {
   // 1089ms with memdown
+  // 1575ms with leveldown
+  // 40s with jsondown
   // jest.setTimeout(60000);
   const store = basicTable(await levelStore<Thing>(leveldb, "things3"));
   console.time("add:1");
@@ -144,3 +146,11 @@ it("Honors schema/type", async () => {
     .toBeInstanceOf(SchemaError);  
 })
 
+it("Honors schema/types", async () => {
+  const store = await levelStore<Thing>(jsonDB, "things4", [
+    { key: "name", notNull: true, unique: true, type: "string" },
+  ]);
+  const e = await store.add("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", { name: 1 as any }).catch(e => e);
+  expect(e)
+    .toBeInstanceOf(SchemaError);  
+})
