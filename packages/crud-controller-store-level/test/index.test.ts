@@ -91,7 +91,7 @@ it("validates: 1000/jsons", async () => {
   // 1089ms with memdown
   // jest.setTimeout(60000);
   const s = await levelStore<Thing>(jsonDB, "things2", [
-    { key: "name", required: true, unique: true },
+    { key: "name", notNull: true, unique: true },
   ]);
   // 10000 records with 40.202s with jsonDown
   for (let i = 0; i < 1000; i++) {
@@ -129,7 +129,7 @@ it("10000's", async () => {
 
 it("Honors schema", async () => {
   const store = await levelStore<Thing>(jsonDB, "things4", [
-    { key: "name", required: true, unique: true },
+    { key: "name", notNull: true, unique: true },
   ]);
   expect(await store.add("a", { x: "aaa" } as any).catch(e => e))
     .toBeInstanceOf(SchemaError)
@@ -137,13 +137,10 @@ it("Honors schema", async () => {
 
 it("Honors schema/type", async () => {
   const store = await levelStore<Thing>(jsonDB, "things4", [
-    { key: "name", required: true, unique: true, type: "string" },
+    { key: "name", notNull: true, unique: true, type: "string" },
   ]);
   const e = await store.add("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", { name: 1 as any }).catch(e => e);
   expect(e)
-    .toBeInstanceOf(SchemaError);
-
-  expect(e.message)
-    .toContain("instead of number")
+    .toBeInstanceOf(SchemaError);  
 })
 
