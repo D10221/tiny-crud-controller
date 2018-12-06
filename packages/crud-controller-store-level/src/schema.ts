@@ -37,14 +37,20 @@ export default <T extends { [key: string]: any }>(
     return isFunction(schema.default) ? schema.default() : schema.default;
   }
 
-  function inSchema(key: string) {
+  function inSchema(key: any) {
     return schemaKeys.indexOf(key) !== -1;
   }
 
-  const validate = (data: T, indexes: { key: keyof T; values: any[] }[]) => {
+  function concat<T>(keys: (keyof T)[], other: (keyof T)[]): (keyof T)[] {
+    return keys.concat(other.filter(x => keys.indexOf(x) === -1));
+  }
+
+  const validate = (data: T, indexes: { key: keyof T; values: any[] }[], ignore?: Partial<T>) => {
     if (!schemaKeys.length) return data;
 
-    return Object.keys(data).reduce(
+    const keys = concat((Object.keys(data) as (keyof T)[]), schemaKeys);
+
+    return keys.reduce(
       (out, key) => {
         if (!inSchema(key))
           throw new SchemaError(`${key} Not in ${schemaName}`);
@@ -62,21 +68,23 @@ export default <T extends { [key: string]: any }>(
         if (!isNull(value) && !isValidType(schema, value)) {
           throw new SchemaError(
             `${schemaName}: '${schema.key}' expected Type '${
-              schema.type
+            arrify(schema.type).join("|")
             }' got '${typeof value}'`,
           );
         }
         if (schema.unique && indexes && indexes.length) {
           const { values } = indexes.find(x => x.key === key);
-          if (values && values.indexOf(value) !== -1) {
-            throw new SchemaError(`${schemaName}: ${key} 'Must be unique'`);
-          }
+          const prev = values && values.indexOf(value) !== -1;
+          if (prev) {
+            if(!ignore || value !== ignore[key])
+            throw new SchemaError(`${schemaName}: '${key}' 'Must be unique'`);
+          }          
         }
 
         out[key] = value;
         return out;
       },
-      { ...data },
+      { ...data as any},
     );
   };
 

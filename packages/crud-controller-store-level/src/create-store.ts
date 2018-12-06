@@ -1,13 +1,13 @@
-import { StoreRecord } from "./types";
-import { SchemaError } from "./schema-error";
 import { keyEncoder } from "./key-encoder";
 import schema, { Schema } from "./schema";
+import { StoreRecord, Store } from "./types";
 /** */
 const catchNotFound = (returns: any = null) => (error: Error) => {
   return error && error.name === "NotFoundError"
     ? returns
     : Promise.reject(error);
 };
+
 interface LevelLike {
   createReadStream(o?: {
     gt?: any;
@@ -25,16 +25,24 @@ interface LevelLike {
   del(key: string): Promise<any>;
 }
 
+export class KeyError extends Error {
+  constructor(message: string) {
+    super(message);
+  }
+}
+export const cache = () => {
+
+}
 /**
  *
  */
 export default async <T extends { [key: string]: any } = {}>(
   db: LevelLike,
   partitionName: string,
-  schemas: Schema<T>[] = [],
-) => {
-  const { encode, decode, isMatch } = keyEncoder(partitionName);
+  schemas: Schema<T>[] = []
+): Promise<Store<T>> => {
 
+  const { encode, decode, isMatch } = keyEncoder(partitionName);
   const getKeys = () =>
     new Promise<string[]>((resolve, reject) => {
       try {
@@ -83,10 +91,10 @@ export default async <T extends { [key: string]: any } = {}>(
     });
 
   // todo:is this faster than saving indexes ?
-  const uniqueIndex = () =>
+  const uniqueIndex = (ignore?: (keyof T)[]) =>
     Promise.all(
       schemas
-        .filter(schema => schema.unique)
+        .filter(schema => schema.unique && (!ignore || ignore.indexOf(schema.key) === -1))
         .map(({ key }) =>
           findMany()
             .then(x => x.map(([_id, value]) => value[key]))
@@ -130,15 +138,20 @@ export default async <T extends { [key: string]: any } = {}>(
     return x;
   };
 
+  /** forcing alphanumeric will enable easier gt & lt and reserved keys like $index? */
+  const isValidPrimaryKey = (x: any) => {
+    return typeof x === "string" && /^[a-zA-Z0-9]*$/.test(x);
+  }
+
   const _schema = schema(schemas, partitionName);
 
   return {
     /** */
     add: async (id: string, data: T) => {
+      // Unique PRI-KEY
+      if (primaryKeys.indexOf(id) !== -1) return Promise.reject(new KeyError(`Duplicated key: ${id}`));
+      if (!isValidPrimaryKey(id)) return Promise.reject(new KeyError(`Invalid key: ${id}`));
       try {
-        // Unique PRI-KEY
-        if (primaryKeys.indexOf(id) !== -1)
-          throw new SchemaError(`Duplicated key: ${id}`);
         // Validate Schema: Warning: adds default values
         data = _schema.validate(data, indexes);
       } catch (error) {
@@ -155,8 +168,11 @@ export default async <T extends { [key: string]: any } = {}>(
       try {
         const found = await findOne(id).catch(catchNotFound(null));
         if (!found) return Promise.reject(new Error(`Not Found key: ${id}`));
-        const u = Object.assign(found, data);
-        data = _schema.validate(u, indexes);
+        data = _schema.validate(
+          data as T, // hack:
+          indexes,
+          /* ignore*/ found,
+        );
       } catch (error) {
         return Promise.reject(error);
       }
@@ -167,9 +183,8 @@ export default async <T extends { [key: string]: any } = {}>(
           .then(reindex())
       );
     },
-    findOne,
-    // ...
     findMany,
+    findOne,
     /** */
     async remove(id?: string): Promise<any> {
       await findOne(id); //throws
