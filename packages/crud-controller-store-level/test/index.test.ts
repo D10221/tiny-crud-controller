@@ -40,9 +40,7 @@ it("finds many", async () => {
   expect(await memStore.findMany()).toMatchObject([]);
 });
 it("throws not found", async () => {
-  expect(await memStore.findOne("a").catch((error: any) => error.name)).toMatch(
-    "NotFound",
-  );
+  expect(await memStore.findOne("a").catch(error => error)).toBeInstanceOf(KeyError)
 });
 it("adds new, etc ...", async () => {
   await memStore.clear();
@@ -52,9 +50,7 @@ it("adds new, etc ...", async () => {
   expect(await memStore.add("a", { name: "aaa" })).toBe(undefined);
   expect(await memStore.findOne("a")).toMatchObject({ name: "aaa" });
   expect(await memStore.remove("a")).toBe(undefined);
-  expect(await memStore.findOne("a").catch(error => error.name)).toMatch(
-    "NotFound",
-  );
+  expect(await memStore.findOne("a").catch(e => e)).toBeInstanceOf(KeyError);
 });
 it("more stores", async () => {
   const store2 = await levelStore(memDB, "moreThings");
@@ -216,8 +212,20 @@ it("updates not dup name", async () => {
 it("updates checking type", async () => {
   const store = await levelStore<{ name: string, createdAt?: string | number | Date | undefined }>(jsonDB, "things9", [
     { key: "name", notNull: true, unique: true, type: "string" }
-  ]);  
+  ]);
   const id = randomString();
-  await store.add(id, { name: randomString() });  
+  await store.add(id, { name: randomString() });
   expect(await store.update(id, { name: randomBytes(8) as any }).catch(e => e)).toBeInstanceOf(SchemaError);
+})
+
+it("deletes and clears indexes", async () => {
+  const store = await levelStore<{ name: string }>(jsonDB, "things9", [
+    { key: "name", notNull: true, unique: true, type: "string" }
+  ]);
+  const id = randomString();
+  const aName = randomString();
+  await store.add(id, { name: aName });
+  await store.remove(id);
+  expect(await store.findOne(id).catch(e => e)).toBeInstanceOf(KeyError);
+  expect(await store.add(id, { name: aName })).toBe(undefined);
 })

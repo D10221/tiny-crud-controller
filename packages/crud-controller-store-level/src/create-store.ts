@@ -2,8 +2,12 @@ import { keyEncoder } from "./key-encoder";
 import schema, { Schema } from "./schema";
 import { StoreRecord, Store } from "./types";
 /** */
+function isNotFoundError(error: Error) {
+  return error instanceof (Error) && error.name === "NotFoundError";
+}
+/** */
 const catchNotFound = (returns: any = null) => (error: Error) => {
-  return error && error.name === "NotFoundError"
+  return isNotFoundError(error)
     ? returns
     : Promise.reject(error);
 };
@@ -184,11 +188,14 @@ export default async <T extends { [key: string]: any } = {}>(
       );
     },
     findMany,
-    findOne,
+    findOne: (id: string) => findOne(id).catch(e =>
+      isNotFoundError(e)
+        ? Promise.reject(new KeyError(`Key '${id}' Not Found`))
+        : Promise.reject(e)),
     /** */
     async remove(id?: string): Promise<any> {
       await findOne(id); //throws
-      return db.del(encode(id)).then(removePrimaryKey(id));
+      return db.del(encode(id)).then(removePrimaryKey(id)).then(reindex());
     },
     /** */
     clear: () =>
@@ -212,6 +219,8 @@ export default async <T extends { [key: string]: any } = {}>(
         } catch (error) {
           return reject(error);
         }
-      }).then(clearPrimaryKeys()),
+      }).then(clearPrimaryKeys()).then(reindex()),
   };
 };
+
+

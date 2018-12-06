@@ -24,7 +24,7 @@ async function configure(app: Express) {
     const { default: levelThings } = await import("./level-things");
     app.use("/api/level/things", [
       json(),
-      await levelThings(LevelDB("db")),
+      await levelThings(LevelDB("demo_db")),
     ]);
     return app;
   } catch (error) {

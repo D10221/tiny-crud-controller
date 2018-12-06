@@ -4,7 +4,7 @@ import CrudController, {
   ensureID,
   validate,
 } from "@australis/tiny-crud-controller";
-import Store, { basicTable } from "@australis/tiny-crud-controller-store-level";
+import Store, { mapOut } from "@australis/tiny-crud-controller-store-level";
 import { Thing } from "./types";
 import { randomBytes } from "crypto";
 
@@ -12,10 +12,11 @@ const route = `/:id?`;
 
 export default async (db: any) => {
 
-  const store = basicTable(
+  const store = mapOut(
     await Store<Thing>(db, "things", [
-      { key: "name", required: true, unique: true }
-    ])
+      { key: "name", notNull: true, unique: true }
+    ]),
+    r => ({ id: r[0], ...r[1] }) //include id in the 'thing'
   );
 
   const crud = CrudController(store);

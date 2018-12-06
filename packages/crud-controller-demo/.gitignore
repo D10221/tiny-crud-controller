@@ -2,3 +2,4 @@ release/
 bundle/
 build/
 node_modules/
+demo_db/
