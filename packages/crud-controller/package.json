@@ -7,7 +7,8 @@
   "types": "lib/index.d.ts",
   "scripts": {
     "test": "jest --ci --env=node",
-    "build": "rimraf lib && tsc -p ."
+    "build": "rimraf lib && tsc -p .",
+    "publishit": "npm publish --access public"
   },
   "keywords": [],
   "author": "daniel@australis-technica.com",
