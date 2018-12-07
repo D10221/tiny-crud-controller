@@ -167,7 +167,7 @@ it("defaults values", async () => {
 })
 
 it("updates same value", async () => {
-  const store = await levelStore<{ name: string, createdAt?: string | number | Date | undefined }>(jsonDB, "things8", [
+  const store = await levelStore<{ name: string, createdAt?: string | number | Date | undefined }>(jsonDB, "things9", [
     { key: "name", notNull: true, unique: true, type: "string" },
     { key: "createdAt", default: () => new Date() },
   ]);
@@ -180,7 +180,7 @@ it("updates same value", async () => {
   }
 })
 it("updates other value", async () => {
-  const store = await levelStore<{ name: string, createdAt?: string | number | Date | undefined }>(jsonDB, "things8", [
+  const store = await levelStore<{ name: string, createdAt?: string | number | Date | undefined }>(jsonDB, "things10", [
     { key: "name", notNull: true, unique: true, type: "string" },
     { key: "createdAt", default: () => new Date() },
   ]);
@@ -195,7 +195,7 @@ it("updates other value", async () => {
 })
 
 it("updates not dup name", async () => {
-  const store = await levelStore<{ name: string, createdAt?: string | number | Date | undefined }>(jsonDB, "things8", [
+  const store = await levelStore<{ name: string, createdAt?: string | number | Date | undefined }>(jsonDB, "things11", [
     { key: "name", notNull: true, unique: true, type: "string" },
     { key: "createdAt", default: () => new Date() },
   ]);
@@ -210,7 +210,7 @@ it("updates not dup name", async () => {
 })
 
 it("updates checking type", async () => {
-  const store = await levelStore<{ name: string, createdAt?: string | number | Date | undefined }>(jsonDB, "things9", [
+  const store = await levelStore<{ name: string, createdAt?: string | number | Date | undefined }>(jsonDB, "things12", [
     { key: "name", notNull: true, unique: true, type: "string" }
   ]);
   const id = randomString();
@@ -219,7 +219,7 @@ it("updates checking type", async () => {
 })
 
 it("deletes and clears indexes", async () => {
-  const store = await levelStore<{ name: string }>(jsonDB, "things9", [
+  const store = await levelStore<{ name: string }>(jsonDB, "things13", [
     { key: "name", notNull: true, unique: true, type: "string" }
   ]);
   const id = randomString();
