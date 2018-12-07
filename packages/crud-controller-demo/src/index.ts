@@ -1,12 +1,12 @@
 import express, { json, Express } from "express";
-import mapOfThings from "./map-of-things";
+// import mapOfThings from "./map-of-things";
 import { LevelDB } from "@australis/tiny-store-level";
 // ...
 const app = express();
 
 async function configure(app: Express) {
   try {
-    app.use("/api/map/things", [json(), mapOfThings()]);
+    // app.use("/api/map/things", [json(), mapOfThings()]);
 
     // const { default: sqlThings} = await import("./sql-things");
     // app.use("/api/sql/things", [json(), await sqlThings()]);
@@ -22,7 +22,7 @@ async function configure(app: Express) {
     // app.use("/api/mongo/things", [json(), mongoThings(db)]);
 
     const { default: levelThings } = await import("./level-things");
-    app.use("/api/level/things", [
+    app.use("/api/things", [
       json(),
       await levelThings(LevelDB("demo_db")),
     ]);

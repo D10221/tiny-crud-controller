@@ -4,11 +4,7 @@
   "version": "0.1.0-2",
   "main": "index.js",
   "license": "MIT",
-  "workspaces": [
-    "packages/tiny-store-asyncmap",
-    "packages/tiny-store-mssql",
-    "packages/tiny-store-mongo",
-    "packages/tiny-store-level",
+  "workspaces": [    
     "packages/crud-controller",
     "packages/crud-controller-demo"
   ]

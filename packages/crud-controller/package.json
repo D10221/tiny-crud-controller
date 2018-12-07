@@ -13,14 +13,13 @@
   "author": "daniel@australis-technica.com",
   "license": "MIT",
   "dependencies": {
-    "express": "^4.16.3",
-    "uuid": "^3.3.2"
+    "express": "^4.16.3"
   },
-  "devDependencies": {
+  "devDependencies": {    
+    "@australis/tiny-store-asyncmap": "0.1.0-1",
     "@types/express": "^4.11.1",
     "@types/jest": "^23.3.9",
-    "@types/uuid": "^3.4.3",
-    "jest": "23.6.0",
+     "jest": "23.6.0",
     "rimraf": "^2.6.2",
     "ts-jest": "23.10.4",
     "ts-node": "^7.0.1",
