@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
 /**
- * 
+ *
  */
 export default (req: Request, _: Response): [string, {}] => {
-  const { id } = req.query;
-  return [id, {}];
+  const { id, ...data } = req.query || { id: undefined };
+  return [id, data];
 };

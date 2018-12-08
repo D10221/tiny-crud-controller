@@ -1,6 +1,4 @@
 import { RequestHandler } from "express";
-import fromBody from "./from-body";
-import fromParams from "./from-params";
 import { Store } from "./types";
 import fromAny from "./from-any";
 /** */
@@ -9,11 +7,10 @@ const noFilter: (id: any, data: any | any[]) => any = (...x) => x;
  * TODO: paged
  */
 export default function CrudController<TStore extends Store>(store: TStore) {
-  //
   /**
-   * READ/GET/LIST
+   * READ/GET one
    */
-  const find = (payload = fromParams) => {
+  const findOne = (payload = fromAny) => {
     payload = payload || fromAny;
     /** */
     return (transform = noFilter): RequestHandler => {
@@ -21,12 +18,52 @@ export default function CrudController<TStore extends Store>(store: TStore) {
       /** */
       return async (req, res, next) => {
         try {
-          const [id] = payload(req, res);
+          const [id, params] = payload(req, res);
+          let ret = await store.findOne(id, params);
+          return res.json(transform(id, ret));
+        } catch (error) {
+          return next(error);
+        }
+      };
+    };
+  };
+  /**
+   * READ/GET one
+   */
+  const findMany = (payload = fromAny) => {
+    payload = payload || fromAny;
+    /** */
+    return (transform = noFilter): RequestHandler => {
+      transform = transform || noFilter;
+      /** */
+      return async (req, res, next) => {
+        try {
+          const [id, params] = payload(req, res);
+          let ret = await store.findMany(params);
+          return res.json(transform(id, ret));
+        } catch (error) {
+          return next(error);
+        }
+      };
+    };
+  };
+  /**
+   * READ/GET/LIST
+   */
+  const find = (payload = fromAny) => {
+    payload = payload || fromAny;
+    /** */
+    return (transform = noFilter): RequestHandler => {
+      transform = transform || noFilter;
+      /** */
+      return async (req, res, next) => {
+        try {
+          const [id, params] = payload(req, res);
           let ret: any;
           if (id) {
-            ret = await store.findOne(id)
+            ret = await store.findOne(id, params);
           } else {
-            ret = await store.findMany()
+            ret = await store.findMany(params);
           }
           return res.json(transform(id, ret));
         } catch (error) {
@@ -56,8 +93,8 @@ export default function CrudController<TStore extends Store>(store: TStore) {
   /**
    * Create, Add, Insert , NEW , PUT
    */
-  const add = (payload = fromBody) => {
-    payload = payload || fromBody;
+  const add = (payload = fromAny) => {
+    payload = payload || fromAny;
     /** */
     return (transform = noFilter): RequestHandler => {
       transform = transform || noFilter;
@@ -77,8 +114,8 @@ export default function CrudController<TStore extends Store>(store: TStore) {
   /**
    * SET, Modify, update, POST
    */
-  const update = (payload = fromBody) => {
-    payload = payload || fromBody;
+  const update = (payload = fromAny) => {
+    payload = payload || fromAny;
     /** */
     return (transform = noFilter): RequestHandler => {
       transform = transform || noFilter;
@@ -98,6 +135,8 @@ export default function CrudController<TStore extends Store>(store: TStore) {
   return {
     add,
     find,
+    findOne,
+    findMany,
     remove,
     update,
   };
