@@ -26,9 +26,7 @@ describe(require(join(__dirname, "../package.json")).name, () => {
     map.add("1", { x: 1 });
     const crud = CrudController(map);
     const handler = crud
-      .findMany
-      // transform in
-      ()(
+      .findMany()(
       (_, data) => data, // transform out
     );
     const x = await fakeRequest(handler, (x: any) => x)({
@@ -128,16 +126,16 @@ describe(require(join(__dirname, "../package.json")).name, () => {
   });
   it("pass parameters", async () => {
     const store: any = {
-      findOne(id: any, ...args: any[]){
-        return Promise.resolve([id, ...args])
-      }
+      findOne(id: any, ...args: any[]) {
+        return Promise.resolve([id, ...args]);
+      },
     };
     const crud = CrudController(store);
     const handler = crud.find()((_, data) => data);
-    const x = await fakeRequest(handler, (x:any)=> x)({      
-      params: { id: 1, x: 2, y:3 },
+    const x = await fakeRequest(handler, (x: any) => x)({
+      params: { id: 1, x: 2, y: 3 },
     }).catch(e => e);
-    expect(x).toMatchObject([1, { x: 2, y:3 }])
+    expect(x).toMatchObject([1, { x: 2, y: 3 }]);
   });
 
   it("receives params", async () => {

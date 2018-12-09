@@ -1,49 +1,51 @@
-// import { Router } from "express";
-// import uuid from "uuid";
-// import CrudController, {
-//   ensureBody,
-//   ensureID,
-//   validate,
-// } from "@australis/tiny-crud-controller";
-// import AsyncMap from "@australis/tiny-store-asyncmap";
-// import { Thing } from "./types";
+import { Router } from "express";
+import CrudController, {
+  ensureBody,
+  ensureID,
+  validate,
+} from "@australis/tiny-crud-controller";
+import AsyncMap from "@australis/tiny-store-asyncmap";
+import { Thing } from "./types";
+import { randomBytes } from "crypto";
 
-// const crud = CrudController(new AsyncMap());
-// const route = `/:id?`;
+export default () => {
+  const { add, find, findMany, findOne, remove, update } = CrudController(
+    new AsyncMap(),
+  );
+  const router = Router();
+  /** READ/GET */
+  router.get(`/find/:id?`, findOne()((_id, data) => data));
+  router.get(`/list`, findMany()((_id, data) => data));
+  router.get(`/:id?`, find()((_id, data) => data));
 
-// export default () => {
-//   const router = Router();
-//   /** READ/GET */
-//   router.get(route, crud.find()((_id, data) => data));
+  /** ADD/PUT*/
+  router.put(`/:id?`, [
+    /*extra-middleware*/
+    ensureBody<Thing>(["name"]),
+    ensureID(() => randomBytes(16).toString("hex")),
+    validate(req => {
+      const validation: string[] = [];
+      if (!req.body.id) {
+        validation.push("missing id");
+      }
+      return Promise.resolve(validation);
+    }),
+    add()(id => id),
+  ]);
 
-//   /** ADD/PUT*/
-//   router.put(route, [
-//     /*extra-middleware*/
-//     ensureBody<Thing>(["name"]),
-//     ensureID(uuid),
-//     validate(req => {
-//       const validation: string[] = [];
-//       if (!req.body.id) {
-//         validation.push("missing id");
-//       }
-//       return Promise.resolve(validation);
-//     }),
-//     crud.add()(id => id),
-//   ]);
+  /** UPDATE/POST */
+  router.post(`/:id?`, [
+    ensureBody(),
+    ensureID(), // reject missing id
+    update()((_id, data) => data),
+  ]);
 
-//   /** UPDATE/POST */
-//   router.post(route, [
-//     ensureBody(),
-//     ensureID(), // reject missing id
-//     crud.update()((_id, data) => data),
-//   ]);
+  /** DELETE/REMOVE */
+  router.delete(`/:id?`, [
+    /*extra-middleware*/
+    ensureID(), // reject no id
+    remove()(() => "ok"),
+  ]);
 
-//   /** DELETE/REMOVE */
-//   router.delete(route, [
-//     /*extra-middleware*/
-//     ensureID(), // reject no id
-//     crud.remove()(() => "ok"),
-//   ]);
-
-//   return router;
-// };
+  return router;
+};
