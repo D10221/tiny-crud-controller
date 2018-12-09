@@ -10,7 +10,7 @@ describe(require(join(__dirname, "../package.json")).name, () => {
     const map = new AsyncMap();
     map.add("1", { x: 1 });
     const crud = CrudController(map);
-    const x = await testJsonHandler(
+    const x = await fakeRequest(
       crud.findOne()(
         //transform out
         (_, data) => data,
@@ -31,14 +31,14 @@ describe(require(join(__dirname, "../package.json")).name, () => {
       ()(
       (_, data) => data, // transform out
     );
-    const x = await testJsonHandler(handler, (x: any) => x)({
+    const x = await fakeRequest(handler, (x: any) => x)({
       // request
     });
     expect(x).toMatchObject([{ x: 1 }]);
   });
   it("gets many from find", async () => {
     const crud = CrudController(new AsyncMap());
-    const x = await testJsonHandler(crud.find()())({
+    const x = await fakeRequest(crud.find()())({
       // request
       params: {},
     });
@@ -48,14 +48,14 @@ describe(require(join(__dirname, "../package.json")).name, () => {
   it("gets one from find", async () => {
     const map = new AsyncMap();
     const crud = CrudController(map);
-    const x = await testJsonHandler(crud.find()())({
+    const x = await fakeRequest(crud.find()())({
       // request
       params: { id: "abc" },
     });
     expect(x).toBe('["abc",null]');
     map.map.set("abc", {} as any);
     expect(
-      await testJsonHandler(crud.find()())({
+      await fakeRequest(crud.find()())({
         // request
         params: { id: "abc" },
       }),
@@ -67,7 +67,7 @@ describe(require(join(__dirname, "../package.json")).name, () => {
     map.map.set("abc", {} as any);
     const crud = CrudController(map);
     expect(
-      await testJsonHandler(crud.update()())({
+      await fakeRequest(crud.update()())({
         // request
         body: { id: "abc", name: "x" },
       }),
@@ -78,7 +78,7 @@ describe(require(join(__dirname, "../package.json")).name, () => {
     const map = new AsyncMap();
     const crud = CrudController(map);
     expect(
-      await testJsonHandler(crud.add()())({
+      await fakeRequest(crud.add()())({
         // request
         body: { id: "abc", name: "x" },
       }),
@@ -91,7 +91,7 @@ describe(require(join(__dirname, "../package.json")).name, () => {
     const map = new AsyncMap();
     map.map.set("abc", {});
     const crud = CrudController(map);
-    const x: any = await testJsonHandler(crud.add()())({
+    const x: any = await fakeRequest(crud.add()())({
       // request
       body: { id: "abc", name: "x" },
     }).catch(e => e);
@@ -102,7 +102,7 @@ describe(require(join(__dirname, "../package.json")).name, () => {
     const map = new AsyncMap();
     map.map.set("abc", {});
     const crud = CrudController(map);
-    const x: any = await testJsonHandler(
+    const x: any = await fakeRequest(
       crud.remove(req => [req.body.id, undefined])(id => Boolean(id)),
     )({
       // request
@@ -120,7 +120,7 @@ describe(require(join(__dirname, "../package.json")).name, () => {
     const handler = crud.remove(req => [req.body.id, undefined])(id =>
       Boolean(id),
     );
-    const x: any = await testJsonHandler(handler)({
+    const x: any = await fakeRequest(handler)({
       // request
       body: { id: "abc" },
     }).catch(e => e);
@@ -134,7 +134,7 @@ describe(require(join(__dirname, "../package.json")).name, () => {
     };
     const crud = CrudController(store);
     const handler = crud.find()((_, data) => data);
-    const x: any = await testJsonHandler(handler, (x:any)=> x)({      
+    const x = await fakeRequest(handler, (x:any)=> x)({      
       params: { id: 1, x: 2, y:3 },
     }).catch(e => e);
     expect(x).toMatchObject([1, { x: 2, y:3 }])
@@ -169,7 +169,7 @@ describe(require(join(__dirname, "../package.json")).name, () => {
   });
 });
 
-const testJsonHandler = (
+const fakeRequest = (
   handler: RequestHandler,
   stringify = JSON.stringify.bind(JSON),
 ) => (req: any) =>
@@ -179,7 +179,6 @@ const testJsonHandler = (
       status: (_statusCode?: any) => (x: any) => resolve(x),
       send: (x: any) => resolve(x),
     };
-
     const next = (e?: any) => {
       if (e) {
         reject(e);
