@@ -1,11 +1,30 @@
 {
-  "name": "@australis/tiny-crud-controller-project",
-  "private": true,
+  "name": "@d10221/tiny-crud-controller",
   "version": "0.1.0-3",
-  "main": "index.js",
+  "description": "simple express crud controller",
+  "private": false,
+  "main": "lib/index.js",
+  "types": "lib/index.d.ts",
+  "scripts": {
+    "test": "jest --ci --env=node",
+    "build": "rimraf lib && tsc -p .",
+    "publishit": "npm publish --access public"
+  },
+  "keywords": [],
+  "author": "daniel@protonmail.com",
   "license": "MIT",
-  "workspaces": [    
-    "packages/crud-controller",
-    "packages/crud-controller-demo"
+  "devDependencies": {
+    "@types/express": "4.17.2",
+    "@types/jest": "24.9.1",
+    "express": "4.17.1",
+    "jest": "25.1.0",
+    "rimraf": "3.0.0",
+    "ts-jest": "25.0.0",
+    "ts-node": "8.6.2",
+    "typescript": "3.7.5"
+  },
+  "files": [
+    "lib/**/*",
+    "readme.md"
   ]
 }

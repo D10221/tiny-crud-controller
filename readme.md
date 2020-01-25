@@ -1,16 +1,23 @@
 # Tiny express crud controller
 
-install:  
+install:
 
-    yarn add @australis/tiny-crud-controller
+    yarn add @d10221/tiny-crud-controller
 
 usage:  
-see packages/crud-controller-demo
+see ../crud-controller-demo
+see ../crud-controller/test
 
 build:
-    
-    ./scripts/run-task.js build
+  
+ yarn build
 
-test: 
-    
-    ./scripts/run-task.js test
+test:
+  
+ yarn test
+
+
+Notes:
+
+- transpiled to be transpiled (esnext)
+- unbundled
