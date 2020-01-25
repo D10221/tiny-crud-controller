@@ -1,4 +1,4 @@
-export { default } from "./crud-controller";
+export { default, crudController } from "./crud-controller";
 export { default as ensureBody } from "./ensure-body";
 export { default as ensureID } from "./ensure-id";
 export { default as excludeKeys } from "./exclude-keys";

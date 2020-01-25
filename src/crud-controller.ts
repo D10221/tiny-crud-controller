@@ -150,19 +150,24 @@ const update = <TStore extends Store>(getStore: GetStore<TStore>) => (
     };
   };
 };
-
-const CrudController = <TStore extends Store>(store: TStore) => {
+/**
+ * 
+ * @param getStore where to get the store from 
+ */
+export const crudController = <TStore extends Store>(
+  getStore: GetStore<TStore>,
+) => {
   return {
-    add: add(() => store),
-    find: find(() => store),
-    findOne: findOne(() => store),
-    findMany: findMany(() => store),
-    remove: remove(() => store),
-    update: update(() => store),
+    add: add(getStore),
+    find: find(getStore),
+    findOne: findOne(getStore),
+    findMany: findMany(getStore),
+    remove: remove(getStore),
+    update: update(getStore),
   };
 };
-
 /**
+ * with store instance
  * TODO: paged
  */
-export default CrudController;
+export default <TStore extends Store>(store: TStore) =>  crudController(_ => store);

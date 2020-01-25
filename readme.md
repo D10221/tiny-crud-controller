@@ -5,8 +5,8 @@ install:
     yarn add @d10221/tiny-crud-controller
 
 usage:  
-see ../crud-controller-demo
-see ../crud-controller/test
+see [test: with controller instance](test/crud-controller.test.ts)  
+see [test: from-request](test/crud-controller-from-request.test.ts)  
 
 build:
   
@@ -15,6 +15,7 @@ build:
 test:
   
  yarn test
+
 
 Notes:
 

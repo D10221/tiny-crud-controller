@@ -15,7 +15,7 @@ const f: Payload = (req, res): [string, {}] => {
       ...query[1],
       ...params[1],
       ...body[1],
-      ...locals[1]
+      ...locals[1] // ?
     },
   ];
 };

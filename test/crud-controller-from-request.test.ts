@@ -1,16 +1,34 @@
-import AsyncMap from "./asyncMap";
-import { RequestHandler } from "express";
 import { join } from "path";
-import CrudController from "../src";
+import { crudController } from "../src";
+import AsyncMap from "./asyncMap";
+import fakeRequest from "./fakeRequest";
+import { Request } from "express";
+/**
+ * Side Effect
+ */
+type Setup = (store: AsyncMap) => AsyncMap;
+
+/**
+ *
+ * @param before sire effects before request, mimics previous middleware
+ */
+const request = (before: Setup) => {
+  const map = new AsyncMap();
+  return fakeRequest(before(map));
+};
+/** where to get the store from */
+const getStoreFromRequest = (req: Request) => req.app.locals.store as AsyncMap;
 /**
  *
  */
 describe(require(join(__dirname, "../package.json")).name, () => {
   it("finds One", async () => {
-    const map = new AsyncMap();
-    map.add("1", { x: 1 });
-    const crud = CrudController(map);
-    const x = await fakeRequest(
+    const crud = crudController(getStoreFromRequest);
+    const x = await request(store => {
+      // setup
+      store.add("1", { x: 1 });
+      return store;
+    })(
       crud.findOne()(
         //transform out
         (_, data) => data,
@@ -22,21 +40,25 @@ describe(require(join(__dirname, "../package.json")).name, () => {
     expect(x).toBe('{"x":1}');
   });
   it("finds Many", async () => {
-    const map = new AsyncMap();
-    map.add("1", { x: 1 });
-    const crud = CrudController(map);
-    const handler = crud
-      .findMany()(
+    const crud = crudController(getStoreFromRequest);
+    const handler = crud.findMany()(
       (_, data) => data, // transform out
     );
-    const x = await fakeRequest(handler, (x: any) => x)({
+    const x = await request(store => {
+      // setup request
+      store.add("1", { x: 1 });
+      return store;
+    })(
+      handler,
+      (x: any) => x,
+    )({
       // request
     });
     expect(x).toMatchObject([{ x: 1 }]);
   });
   it("gets many from find", async () => {
-    const crud = CrudController(new AsyncMap());
-    const x = await fakeRequest(crud.find()())({
+    const crud = crudController(getStoreFromRequest);
+    const x = await request(store => store)(crud.find()())({
       // request
       params: {},
     });
@@ -44,16 +66,22 @@ describe(require(join(__dirname, "../package.json")).name, () => {
   });
 
   it("gets one from find", async () => {
-    const map = new AsyncMap();
-    const crud = CrudController(map);
-    const x = await fakeRequest(crud.find()())({
+    const crud = crudController(getStoreFromRequest);
+    const x = await request(store => {
+      // setup request:
+      return store;
+    })(crud.find()())({
       // request
       params: { id: "abc" },
     });
     expect(x).toBe('["abc",null]');
-    map.map.set("abc", {} as any);
+    // ....
     expect(
-      await fakeRequest(crud.find()())({
+      await request(store => {
+        // setup request
+        store.map.set("abc", {} as any);
+        return store;
+      })(crud.find()())({
         // request
         params: { id: "abc" },
       }),
@@ -61,11 +89,13 @@ describe(require(join(__dirname, "../package.json")).name, () => {
   });
 
   it("updates", async () => {
-    const map = new AsyncMap();
-    map.map.set("abc", {} as any);
-    const crud = CrudController(map);
+    const crud = crudController(getStoreFromRequest);
     expect(
-      await fakeRequest(crud.update()())({
+      await request(store => {
+        // setup request
+        store.map.set("abc", {} as any);
+        return store;
+      })(crud.update()())({
         // request
         body: { id: "abc", name: "x" },
       }),
@@ -73,10 +103,9 @@ describe(require(join(__dirname, "../package.json")).name, () => {
   });
 
   it("adds", async () => {
-    const map = new AsyncMap();
-    const crud = CrudController(map);
+    const crud = crudController(getStoreFromRequest);
     expect(
-      await fakeRequest(crud.add()())({
+      await request(store => store)(crud.add()())({
         // request
         body: { id: "abc", name: "x" },
       }),
@@ -86,10 +115,11 @@ describe(require(join(__dirname, "../package.json")).name, () => {
    * Warning: testing AsyncMap instead of controller?
    */
   it("adds NOT", async () => {
-    const map = new AsyncMap();
-    map.map.set("abc", {});
-    const crud = CrudController(map);
-    const x: any = await fakeRequest(crud.add()())({
+    const crud = crudController(getStoreFromRequest);
+    const x: any = await request(store => {
+      store.map.set("abc", {});
+      return store;
+    })(crud.add()())({
       // request
       body: { id: "abc", name: "x" },
     }).catch(e => e);
@@ -97,12 +127,12 @@ describe(require(join(__dirname, "../package.json")).name, () => {
   });
 
   it("removes", async () => {
-    const map = new AsyncMap();
-    map.map.set("abc", {});
-    const crud = CrudController(map);
-    const x: any = await fakeRequest(
-      crud.remove(req => [req.body.id, undefined])(id => Boolean(id)),
-    )({
+    const crud = crudController(getStoreFromRequest);
+    const x: any = await request(store => {
+      // setup: 
+      store.map.set("abc", {});
+      return store;
+    })(crud.remove(req => [req.body.id, undefined])(id => Boolean(id)))({
       // request
       body: { id: "abc" },
     }).catch(e => e);
@@ -113,12 +143,11 @@ describe(require(join(__dirname, "../package.json")).name, () => {
    * Warning: testing AsyncMap instead of controller?
    */
   it("removes NOT", async () => {
-    const store = new AsyncMap();
-    const crud = CrudController(store);
+    const crud = crudController(getStoreFromRequest);
     const handler = crud.remove(req => [req.body.id, undefined])(id =>
       Boolean(id),
     );
-    const x: any = await fakeRequest(handler)({
+    const x: any = await request(store => store)(handler)({
       // request
       body: { id: "abc" },
     }).catch(e => e);
@@ -130,12 +159,17 @@ describe(require(join(__dirname, "../package.json")).name, () => {
         return Promise.resolve([id, ...args]);
       },
     };
-    const crud = CrudController(store);
+    const crud = crudController(_req => {
+      return store;
+    });
     const handler = crud.find()((_, data) => data);
-    const x = await fakeRequest(handler, (x: any) => x)({
-      params: { id: 1, x: 2, y: 3 },
+    const x = await request(store => store)(
+      handler,
+      (x: any) => x,
+    )({
+      params: { id: "1", x: "2", y: "3" },
     }).catch(e => e);
-    expect(x).toMatchObject([1, { x: 2, y: 3 }]);
+    expect(x).toMatchObject(["1", { x: "2", y: "3" }]);
   });
 
   it("receives params", async () => {
@@ -166,23 +200,3 @@ describe(require(join(__dirname, "../package.json")).name, () => {
     ).toMatchObject([2, { x: 3 }]);
   });
 });
-
-const fakeRequest = (
-  handler: RequestHandler,
-  stringify = JSON.stringify.bind(JSON),
-) => (req: any) =>
-  new Promise<any>((resolve, reject) => {
-    const res: any = {
-      json: (x: any) => resolve(stringify(x)),
-      status: (_statusCode?: any) => (x: any) => resolve(x),
-      send: (x: any) => resolve(x),
-    };
-    const next = (e?: any) => {
-      if (e) {
-        reject(e);
-      } else {
-        resolve(null);
-      }
-    };
-    handler(req, res, next);
-  });
