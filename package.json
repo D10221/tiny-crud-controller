@@ -1,7 +1,7 @@
 {
   "name": "@d10221/tiny-crud-controller",
   "version": "1.0.0-aplha.1",
-  "description": "simple express crud controller",
+  "description": "Simple express CRUD controller",
   "private": false,
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
@@ -24,7 +24,7 @@
     "typescript": "3.7.5"
   },
   "files": [
-    "lib/**/*",
-    "readme.md"
+    "lib",
+    "src"
   ]
 }
